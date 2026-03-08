@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trip Admin — Bus Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fdf8f2;
+      --surface: #fff;
+      --surface2: #fef4e8;
+      --accent: #f77f2a;
+      --accent2: #4caf8a;
+      --danger: #e05252;
+      --text: #2c2416;
+      --muted: #9a8a78;
+      --border: #ecdfd0;
+      --radius: 16px;
+      --shadow: 0 2px 16px rgba(180,120,60,0.10);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, #e8d5b7 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .page { max-width: 700px; margin: 0 auto; padding: 1.25rem 1rem 4rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      padding: 1rem 0 0.5rem;
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    header .bus { font-size: 2.2rem; display: block; animation: wiggle 4s ease-in-out infinite; }
+    header h1 { font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em; margin-top: 0.25rem; }
+    header h1 em { font-style: italic; color: var(--accent); font-family: 'Lora', serif; }
+    header p { font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-top: 0.2rem; }
+
+    .admin-badge {
+      display: inline-block;
+      background: #fff3e0; border: 2px solid #ffd4a0;
+      color: var(--accent); font-size: 0.68rem; font-weight: 900;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px; margin-top: 0.5rem;
+    }
+
+    /* ── STATUS TICKER ── */
+    .status-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 1rem;
+      animation: slideUp 0.4s 0.05s ease both;
+    }
+
+    .status-icon { font-size: 2rem; flex-shrink: 0; }
+
+    .status-text h2 { font-size: 0.95rem; font-weight: 900; }
+    .status-text p { font-size: 0.78rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+    .status-actions { margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      border: none; border-radius: 10px;
+      padding: 0.55rem 1.1rem;
+      font-family: 'Nunito', sans-serif; font-weight: 900;
+      font-size: 0.82rem; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: var(--accent); color: white;
+      box-shadow: 0 3px 10px rgba(247,127,42,0.35);
+    }
+
+    .btn-primary:hover { box-shadow: 0 5px 14px rgba(247,127,42,0.4); transform: translateY(-1px); }
+
+    .btn-green {
+      background: var(--accent2); color: white;
+      box-shadow: 0 3px 10px rgba(76,175,138,0.3);
+    }
+
+    .btn-danger {
+      background: var(--danger); color: white;
+      box-shadow: 0 3px 10px rgba(224,82,82,0.3);
+    }
+
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      animation: slideUp 0.4s ease both;
+    }
+
+    .card:nth-of-type(1) { animation-delay: 0.1s; }
+    .card:nth-of-type(2) { animation-delay: 0.15s; }
+    .card:nth-of-type(3) { animation-delay: 0.2s; }
+    .card:nth-of-type(4) { animation-delay: 0.25s; }
+
+    .card-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.75rem 1.1rem;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card-icon {
+      font-size: 1rem; width: 28px; height: 28px;
+      background: white; border: 2px solid var(--border);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .card-title { font-size: 0.85rem; font-weight: 800; }
+
+    .card-body { padding: 1.1rem; }
+
+    /* ── FORM FIELDS ── */
+    .field-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.7rem; margin-bottom: 0.7rem;
+    }
+
+    @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+
+    .field.full { grid-column: 1 / -1; }
+
+    .field label {
+      font-size: 0.68rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+    }
+
+    .field input, .field select {
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: 10px; padding: 0.55rem 0.85rem;
+      font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 600;
+      color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(247,127,42,0.12);
+    }
+
+    .field input::placeholder { color: #c9b9a8; }
+
+    /* ── STOPS ── */
+    .stop-row {
+      display: flex; gap: 0.5rem; align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .stop-row:last-child { border-bottom: none; }
+
+    .stop-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent2); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 900; flex-shrink: 0;
+    }
+
+    .stop-inputs { display: flex; gap: 0.5rem; flex: 1; flex-wrap: wrap; }
+
+    .stop-inputs input {
+      flex: 1; min-width: 100px;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: 8px; padding: 0.45rem 0.7rem;
+      font-family: 'Nunito', sans-serif; font-size: 0.82rem; font-weight: 600;
+      color: var(--text); outline: none;
+    }
+
+    .stop-inputs input:focus { border-color: var(--accent); }
+    .stop-inputs input::placeholder { color: #c9b9a8; }
+
+    .stop-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1rem; padding: 2px 4px;
+      border-radius: 6px; transition: color 0.2s;
+    }
+
+    .stop-remove:hover { color: var(--danger); }
+
+    .add-stop-btn {
+      background: none; border: 2px dashed var(--border);
+      border-radius: 10px; padding: 0.5rem;
+      font-family: 'Nunito', sans-serif; font-size: 0.8rem; font-weight: 800;
+      color: var(--muted); cursor: pointer; width: 100%; margin-top: 0.5rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .add-stop-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── PING LOG ── */
+    .ping-log {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      max-height: 160px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      line-height: 1.8;
+      font-family: monospace;
+    }
+
+    .log-entry { display: flex; gap: 0.5rem; }
+    .log-time { color: var(--accent); flex-shrink: 0; }
+    .log-ok { color: var(--accent2); }
+    .log-err { color: var(--danger); }
+
+    /* ── GPS STATUS ── */
+    .gps-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg); border: 2px solid var(--border);
+      border-radius: 10px; margin-bottom: 0.75rem;
+    }
+
+    .gps-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .gps-dot.active { background: var(--accent2); animation: pulse 1.5s infinite; }
+    .gps-dot.error { background: var(--danger); }
+
+    .gps-text { font-size: 0.78rem; font-weight: 700; }
+    .gps-coords { font-size: 0.7rem; color: var(--muted); font-weight: 600; font-family: monospace; }
+
+    .next-ping-badge {
+      margin-left: auto;
+      background: var(--surface2); border: 2px solid var(--border);
+      border-radius: 8px; padding: 4px 10px;
+      font-size: 0.72rem; font-weight: 800; color: var(--muted);
+    }
+
+    /* ── KEYS CARD ── */
+    .keys-note {
+      background: #fff8f0; border: 2px solid #ffd4a0;
+      border-radius: 10px; padding: 0.85rem;
+      font-size: 0.78rem; font-weight: 600; color: #7a5c3a;
+      line-height: 1.6;
+    }
+
+    .keys-note a { color: var(--accent); text-decoration: none; }
+    .keys-note a:hover { text-decoration: underline; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.88); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="bus">🚌</span>
+    <h1>Trip <em>Admin</em></h1>
+    <p>Set up and manage charter trips</p>
+    <span class="admin-badge">🔧 Driver / Operator View</span>
+  </header>
+
+  <!-- Trip Status -->
+  <div class="status-card" id="statusCard">
+    <div class="status-icon" id="statusIcon">🟤</div>
+    <div class="status-text">
+      <h2 id="statusTitle">No active trip</h2>
+      <p id="statusDesc">Set up a trip below and hit Start</p>
+    </div>
+    <div class="status-actions" id="statusActions">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- API Keys -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">🔑</div>
+      <span class="card-title">API Keys & Config</span>
+    </div>
+    <div class="card-body">
+      <div class="field-grid">
+        <div class="field">
+          <label>Supabase URL</label>
+          <input type="text" id="cfgSupabaseUrl" placeholder="https://xxxx.supabase.co" />
+        </div>
+        <div class="field">
+          <label>Supabase Anon Key</label>
+          <input type="text" id="cfgSupabaseKey" placeholder="eyJ..." />
+        </div>
+        <div class="field">
+          <label>Google Directions API Key</label>
+          <input type="text" id="cfgGoogleKey" placeholder="AIza..." />
+        </div>
+        <div class="field">
+          <label>YouTube Live Video ID</label>
+          <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" />
+        </div>
+        <div class="field full">
+          <label>Your GitHub Pages URL (for QR codes)</label>
+          <input type="text" id="cfgSiteUrl" placeholder="https://yourusername.github.io/bus" />
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="saveKeys()">Save Keys</button>
+      <div class="keys-note" style="margin-top:0.75rem">
+        Keys are saved locally on this device only — never shared with passengers.
+        Get a free Supabase project at <a href="https://supabase.com" target="_blank">supabase.com</a>.
+        Get a Google Directions API key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Setup -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <span class="card-title">Trip Details</span>
+    </div>
+    <div class="card-body">
+      <div class="field-grid">
+        <div class="field">
+          <label>Trip Name</label>
+          <input type="text" id="tripName" placeholder="e.g. Wichita to KC Charter" />
+        </div>
+        <div class="field">
+          <label>Departure Time</label>
+          <input type="datetime-local" id="departureTime" />
+        </div>
+        <div class="field full">
+          <label>Origin (full address)</label>
+          <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS" />
+        </div>
+        <div class="field full">
+          <label>Destination (full address)</label>
+          <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO" />
+        </div>
+        <div class="field full">
+          <label>Google Maps Share Link (for passenger map)</label>
+          <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+        </div>
+        <div class="field">
+          <label>Passenger PIN (4 digits)</label>
+          <input type="text" id="tripPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="e.g. 7392" />
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end;gap:0.5rem">
+          <div style="flex:1">
+            <label>QR Code Link Preview</label>
+            <input type="text" id="qrPreview" readonly style="font-size:0.72rem;color:var(--muted);cursor:text" placeholder="Enter your GitHub Pages URL in Settings first" />
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-outline" onclick="generateQrLink()">🔗 Preview QR Link</button>
+        <button class="btn btn-outline" onclick="openQrGenerator()">📱 Open QR Generator</button>
+      </div>
+      <div class="keys-note" style="margin-top:0.75rem">
+        Set a new 4-digit PIN for each charter. Passengers scan the QR code (which includes the PIN) and go straight in — no typing needed. Change the PIN after each trip to lock out previous passengers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Planned Stops -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">🛑</div>
+      <span class="card-title">Planned Stops</span>
+    </div>
+    <div class="card-body">
+      <div id="stopsList"></div>
+      <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+    </div>
+  </div>
+
+  <!-- GPS Pinger -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📡</div>
+      <span class="card-title">GPS Pinger</span>
+    </div>
+    <div class="card-body">
+      <div class="gps-row">
+        <div class="gps-dot" id="gpsDot"></div>
+        <div>
+          <div class="gps-text" id="gpsText">GPS not started</div>
+          <div class="gps-coords" id="gpsCoords">—</div>
+        </div>
+        <div class="next-ping-badge" id="nextPingBadge">—</div>
+      </div>
+      <div class="ping-log" id="pingLog">
+        <div style="color:var(--muted)">Ping log will appear here once a trip is active...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Stop Control -->
+  <div class="card" id="stopControlCard" style="display:none">
+    <div class="card-header">
+      <div class="card-icon">🚏</div>
+      <span class="card-title">Stop Control</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:0.82rem;font-weight:600;color:var(--muted);margin-bottom:0.75rem">
+        Mark stops as completed as you depart them. This updates the passenger timeline in real time.
+      </p>
+      <div id="stopButtons"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── STATE ────────────────────────────────────────────────────────────
+  let tripActive = false;
+  let pingInterval = null;
+  let countdownInterval = null;
+  let nextPingAt = null;
+  let stops = [];
+  let stopStatuses = [];
+
+  const PING_INTERVAL_MS = 20 * 60 * 1000; // 20 minutes
+
+  // ── LOAD SAVED KEYS ──────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('cfgSupabaseUrl').value  = localStorage.getItem('supabaseUrl')  || '';
+    document.getElementById('cfgSupabaseKey').value  = localStorage.getItem('supabaseKey')  || '';
+    document.getElementById('cfgGoogleKey').value    = localStorage.getItem('googleKey')    || '';
+    document.getElementById('cfgYoutubeId').value    = localStorage.getItem('youtubeId')    || '';
+    document.getElementById('cfgSiteUrl').value      = localStorage.getItem('siteUrl')      || '';
+    loadDefaultStops();
+    updateStatusCard();
+  });
+
+  function saveKeys() {
+    localStorage.setItem('supabaseUrl', document.getElementById('cfgSupabaseUrl').value.trim());
+    localStorage.setItem('supabaseKey', document.getElementById('cfgSupabaseKey').value.trim());
+    localStorage.setItem('googleKey',   document.getElementById('cfgGoogleKey').value.trim());
+    localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
+    localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
+    flashBtn(event.target, '✓ Saved!');
+  }
+
+  function buildQrUrl() {
+    const base = (localStorage.getItem('siteUrl') || document.getElementById('cfgSiteUrl').value.trim()).replace(/\/$/, '');
+    const pin  = document.getElementById('tripPin').value.trim();
+    if (!base) return null;
+    if (pin.length === 4) return `${base}?pin=${pin}`;
+    return base;
+  }
+
+  function generateQrLink() {
+    const url = buildQrUrl();
+    if (!url) {
+      alert('Enter your GitHub Pages URL in the API Keys section first.');
+      return;
+    }
+    document.getElementById('qrPreview').value = url;
+  }
+
+  function openQrGenerator() {
+    const url = buildQrUrl();
+    if (!url) {
+      alert('Enter your GitHub Pages URL in the API Keys section first.');
+      return;
+    }
+    document.getElementById('qrPreview').value = url;
+    window.open(`https://qr.io/?url=${encodeURIComponent(url)}`, '_blank');
+  }
+  }
+
+  // ── STOPS ─────────────────────────────────────────────────────────────
+  function loadDefaultStops() {
+    if (stops.length === 0) {
+      addStop('Origin', '', false);
+      addStop('', '', true);
+      addStop('Destination', '', false);
+    }
+  }
+
+  function addStop(name = '', address = '', removable = true) {
+    const id = Date.now() + Math.random();
+    stops.push({ id, name, address, status: 'upcoming' });
+    renderStops();
+  }
+
+  function removeStop(id) {
+    stops = stops.filter(s => s.id !== id);
+    renderStops();
+  }
+
+  function renderStops() {
+    const list = document.getElementById('stopsList');
+    list.innerHTML = '';
+    stops.forEach((stop, i) => {
+      const row = document.createElement('div');
+      row.className = 'stop-row';
+      row.innerHTML = `
+        <div class="stop-num">${i + 1}</div>
+        <div class="stop-inputs">
+          <input type="text" placeholder="Stop name (e.g. McDonald's Topeka)" value="${stop.name}"
+            oninput="stops[${i}].name = this.value" />
+          <input type="text" placeholder="Full address" value="${stop.address}"
+            oninput="stops[${i}].address = this.value" />
+          <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
+            oninput="stops[${i}].duration = this.value" style="max-width:140px" />
+        </div>
+        ${i > 0 && i < stops.length - 1 ? `<button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>` : ''}
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  // ── STATUS CARD ───────────────────────────────────────────────────────
+  function updateStatusCard() {
+    const icon  = document.getElementById('statusIcon');
+    const title = document.getElementById('statusTitle');
+    const desc  = document.getElementById('statusDesc');
+    const acts  = document.getElementById('statusActions');
+
+    if (!tripActive) {
+      icon.textContent = '🟤';
+      title.textContent = 'No active trip';
+      desc.textContent  = 'Fill in trip details and hit Start Trip';
+      acts.innerHTML = `<button class="btn btn-primary" onclick="startTrip()">▶ Start Trip</button>`;
+      document.getElementById('stopControlCard').style.display = 'none';
+    } else {
+      icon.textContent = '🟢';
+      title.textContent = document.getElementById('tripName').value || 'Trip in progress';
+      desc.textContent  = 'GPS pinging every 20 minutes — passengers can see live updates';
+      acts.innerHTML = `<button class="btn btn-danger" onclick="endTrip()">■ End Trip</button>`;
+      document.getElementById('stopControlCard').style.display = 'block';
+      renderStopButtons();
+    }
+  }
+
+  // ── START / END TRIP ──────────────────────────────────────────────────
+  async function startTrip() {
+    const tripName = document.getElementById('tripName').value.trim();
+    const origin   = document.getElementById('tripOrigin').value.trim();
+    const dest     = document.getElementById('tripDest').value.trim();
+
+    if (!tripName || !origin || !dest) {
+      alert('Please fill in Trip Name, Origin, and Destination before starting.');
+      return;
+    }
+
+    if (!getSupabaseUrl() || !getSupabaseKey()) {
+      alert('Please enter your Supabase URL and key in the Config section first.');
+      return;
+    }
+
+    // Initialize stop statuses
+    stopStatuses = stops.map((s, i) => ({
+      ...s,
+      status: i === 0 ? 'done' : 'upcoming'
+    }));
+
+    tripActive = true;
+    updateStatusCard();
+    startGpsPinger();
+    await doPing(); // immediate first ping
+  }
+
+  async function endTrip() {
+    if (!confirm('End the trip? This will clear the passenger view.')) return;
+    tripActive = false;
+    stopGpsPinger();
+    updateStatusCard();
+
+    // Mark trip inactive in Supabase
+    await pushToSupabase({ status: 'inactive' });
+    addLog('Trip ended', 'ok');
+    document.getElementById('gpsDot').className = 'gps-dot';
+    document.getElementById('gpsText').textContent = 'GPS stopped';
+  }
+
+  // ── GPS PINGER ────────────────────────────────────────────────────────
+  function startGpsPinger() {
+    document.getElementById('gpsDot').className = 'gps-dot active';
+    document.getElementById('gpsText').textContent = 'Getting GPS...';
+
+    pingInterval = setInterval(doPing, PING_INTERVAL_MS);
+    startCountdown();
+  }
+
+  function stopGpsPinger() {
+    if (pingInterval)    { clearInterval(pingInterval);    pingInterval    = null; }
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    nextPingAt = null;
+    document.getElementById('nextPingBadge').textContent = '—';
+  }
+
+  function startCountdown() {
+    nextPingAt = Date.now() + PING_INTERVAL_MS;
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((nextPingAt - Date.now()) / 1000));
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+      document.getElementById('nextPingBadge').textContent =
+        `Next ping: ${mins}:${secs.toString().padStart(2,'0')}`;
+    }, 1000);
+  }
+
+  async function doPing() {
+    addLog('Getting GPS position...', 'info');
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const accuracy = Math.round(pos.coords.accuracy);
+
+      document.getElementById('gpsCoords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${accuracy}m)`;
+      document.getElementById('gpsText').textContent = 'GPS active';
+      document.getElementById('gpsDot').className = 'gps-dot active';
+
+      addLog(`Position: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'ok');
+
+      // Get ETA from Google if key available
+      let etaData = {};
+      if (getGoogleKey()) {
+        etaData = await getETAFromGoogle(lat, lng);
+      }
+
+      // Build full state object
+      const origin = document.getElementById('tripOrigin').value.trim();
+      const dest   = document.getElementById('tripDest').value.trim();
+      const name   = document.getElementById('tripName').value.trim();
+      const mapsUrl = document.getElementById('tripMapsUrl').value.trim();
+      const youtubeId = localStorage.getItem('youtubeId') || '';
+
+      const state = {
+        status: 'active',
+        trip_name: name,
+        origin: stops[0]?.name || origin,
+        destination: stops[stops.length - 1]?.name || dest,
+        youtube_id: youtubeId,
+        maps_url: mapsUrl,
+        access_pin: document.getElementById('tripPin').value.trim() || null,
+        lat, lng,
+        stops: stopStatuses,
+        updated_at: new Date().toISOString(),
+        ...etaData
+      };
+
+      await pushToSupabase(state);
+      startCountdown(); // reset countdown after successful ping
+
+    }, (err) => {
+      document.getElementById('gpsDot').className = 'gps-dot error';
+      document.getElementById('gpsText').textContent = 'GPS error — check permissions';
+      addLog(`GPS error: ${err.message}`, 'err');
+    }, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    });
+  }
+
+  // ── GOOGLE DIRECTIONS ─────────────────────────────────────────────────
+  async function getETAFromGoogle(lat, lng) {
+    const dest    = document.getElementById('tripDest').value.trim();
+    const apiKey  = getGoogleKey();
+    const origin  = `${lat},${lng}`;
+
+    // Find next incomplete stop to get that ETA too
+    const nextStop = stopStatuses.find(s => s.status === 'upcoming' && s.address);
+    let etaNextStop = '—';
+
+    try {
+      // ETA to final destination
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&departure_time=now&traffic_model=best_guess&key=${apiKey}`;
+
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.status !== 'OK') {
+        addLog(`Google API: ${data.status}`, 'err');
+        return {};
+      }
+
+      const leg = data.routes[0].legs[0];
+      const durationSecs = leg.duration_in_traffic?.value || leg.duration.value;
+      const arrivalTime  = new Date(Date.now() + durationSecs * 1000);
+      const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const distStr      = leg.distance.text;
+
+      // Progress % — compare distance remaining vs total
+      // We approximate total by departure distance (stored first ping)
+      const distMeters = leg.distance.value;
+
+      // ETA to next stop
+      if (nextStop?.address) {
+        const url2 = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&departure_time=now&key=${apiKey}`;
+        const res2  = await fetch(url2);
+        const data2 = await res2.json();
+        if (data2.status === 'OK') {
+          const secs2 = data2.routes[0].legs[0].duration_in_traffic?.value || data2.routes[0].legs[0].duration.value;
+          const arr2  = new Date(Date.now() + secs2 * 1000);
+          etaNextStop = arr2.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+      }
+
+      addLog(`ETA to ${dest.split(',')[0]}: ${etaStr} · ${distStr} remaining`, 'ok');
+
+      return {
+        eta_destination:  etaStr,
+        eta_next_stop:    etaNextStop,
+        distance_remaining: distStr,
+        progress_pct:     Math.max(0, Math.min(99, Math.round(100 - (distMeters / 400000) * 100)))
+      };
+
+    } catch(e) {
+      addLog(`Google API error: ${e.message}`, 'err');
+      return {};
+    }
+  }
+
+  // ── SUPABASE ──────────────────────────────────────────────────────────
+  async function pushToSupabase(data) {
+    const url = getSupabaseUrl();
+    const key = getSupabaseKey();
+    if (!url || !key) { addLog('Supabase not configured', 'err'); return; }
+
+    try {
+      // Upsert with fixed id=1 so there's always just one row
+      const res = await fetch(`${url}/rest/v1/trip_state?on_conflict=id`, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({ id: 1, ...data })
+      });
+
+      if (res.ok || res.status === 201 || res.status === 200) {
+        addLog('Supabase updated ✓', 'ok');
+      } else {
+        const err = await res.text();
+        addLog(`Supabase error: ${res.status} ${err}`, 'err');
+      }
+    } catch(e) {
+      addLog(`Supabase fetch error: ${e.message}`, 'err');
+    }
+  }
+
+  // ── STOP CONTROL ──────────────────────────────────────────────────────
+  function renderStopButtons() {
+    const container = document.getElementById('stopButtons');
+    container.innerHTML = '';
+    stopStatuses.forEach((stop, i) => {
+      if (i === 0) return; // origin auto-marked done
+      const btn = document.createElement('button');
+      btn.className = `btn ${stop.status === 'done' ? 'btn-outline' : 'btn-green'}`;
+      btn.style.marginBottom = '0.5rem';
+      btn.style.marginRight = '0.5rem';
+      btn.textContent = stop.status === 'done'
+        ? `✓ Departed ${stop.name || 'Stop ' + (i+1)}`
+        : `Mark Departed: ${stop.name || 'Stop ' + (i+1)}`;
+      btn.disabled = stop.status === 'done';
+      btn.onclick = () => markStopDone(i);
+      container.appendChild(btn);
+    });
+  }
+
+  async function markStopDone(idx) {
+    stopStatuses[idx].status = 'done';
+    stopStatuses[idx].departed = new Date().toISOString();
+
+    // Find next upcoming stop and mark active
+    const nextIdx = stopStatuses.findIndex((s, i) => i > idx && s.status === 'upcoming');
+    if (nextIdx !== -1) stopStatuses[nextIdx].status = 'active';
+
+    renderStopButtons();
+    addLog(`Marked departed: ${stopStatuses[idx].name || 'Stop ' + (idx+1)}`, 'ok');
+    await doPing(); // immediate ping after stop departure
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────
+  function addLog(msg, type = 'info') {
+    const log = document.getElementById('pingLog');
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="log-time">${time}</span><span class="${type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : ''}">${msg}</span>`;
+    log.prepend(div);
+    // Keep last 30 entries
+    while (log.children.length > 31) log.removeChild(log.lastChild);
+  }
+
+  function flashBtn(btn, msg) {
+    const orig = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => btn.textContent = orig, 2000);
+  }
+
+  function getSupabaseUrl()  { return localStorage.getItem('supabaseUrl')  || document.getElementById('cfgSupabaseUrl').value.trim(); }
+  function getSupabaseKey()  { return localStorage.getItem('supabaseKey')  || document.getElementById('cfgSupabaseKey').value.trim(); }
+  function getGoogleKey()    { return localStorage.getItem('googleKey')    || document.getElementById('cfgGoogleKey').value.trim(); }
+</script>
+</body>
+</html>

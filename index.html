@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Trip Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fdf8f2;
+      --surface: #fff;
+      --surface2: #fef4e8;
+      --accent: #f77f2a;
+      --accent2: #4caf8a;
+      --accent3: #5b8ef0;
+      --text: #2c2416;
+      --muted: #9a8a78;
+      --border: #ecdfd0;
+      --radius: 16px;
+      --shadow: 0 2px 16px rgba(180,120,60,0.10);
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, #e8d5b7 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      gap: 0.75rem;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    .bus-emoji { font-size: 1.8rem; animation: wiggle 4s ease-in-out infinite; }
+
+    .header-text h1 {
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      font-weight: 900; letter-spacing: -0.02em;
+    }
+
+    .header-text h1 em { font-style: italic; color: var(--accent); font-family: 'Lora', serif; }
+    .header-text p { font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-top: 1px; }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; }
+
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #fff5ee; border: 2px solid #ffd4b0;
+      color: var(--accent); font-size: 0.68rem; font-weight: 900;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px; background: var(--accent);
+      border-radius: 50%; animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .last-ping {
+      font-size: 0.7rem; color: var(--muted); font-weight: 600;
+    }
+
+    /* ── ETA BAR ── */
+    .eta-bar {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1.25rem;
+      display: flex; align-items: center;
+      gap: 1.5rem; flex-wrap: wrap;
+      box-shadow: var(--shadow);
+      animation: slideUp 0.4s 0.05s ease both;
+    }
+
+    .eta-item { display: flex; flex-direction: column; gap: 2px; }
+
+    .eta-label {
+      font-size: 0.65rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted);
+    }
+
+    .eta-value {
+      font-size: clamp(1rem, 2vw, 1.35rem);
+      font-weight: 900; color: var(--text);
+    }
+
+    .eta-value.highlight { color: var(--accent); }
+    .eta-value.green { color: var(--accent2); }
+
+    .eta-divider {
+      width: 1px; height: 36px; background: var(--border); flex-shrink: 0;
+    }
+
+    .progress-wrap {
+      flex: 1; min-width: 180px;
+    }
+
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.68rem; font-weight: 800; color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .progress-track {
+      height: 8px; background: var(--border);
+      border-radius: 999px; overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius: 999px;
+      transition: width 1s ease;
+    }
+
+    /* ── MAIN PANELS ── */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 680px) {
+      .panels { grid-template-columns: 1fr; }
+      .page { min-height: auto; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+      animation: slideUp 0.5s ease both;
+      min-height: 280px;
+    }
+
+    .panel:nth-child(1) { animation-delay: 0.1s; }
+    .panel:nth-child(2) { animation-delay: 0.2s; }
+
+    .panel-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.65rem 1rem;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-icon {
+      font-size: 1rem; width: 28px; height: 28px;
+      background: white; border: 2px solid var(--border);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .panel-title { font-size: 0.85rem; font-weight: 800; }
+    .panel-sub { margin-left: auto; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+
+    .panel-body {
+      flex: 1; min-height: 0; position: relative; background: #faf3ea;
+    }
+
+    .panel-body iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border: none; display: block;
+    }
+
+    .placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.5rem; text-align: center; padding: 1.5rem;
+    }
+
+    .placeholder .big { font-size: 2.2rem; }
+    .placeholder strong { font-size: 0.95rem; font-weight: 800; }
+    .placeholder span { font-size: 0.78rem; color: var(--muted); max-width: 200px; line-height: 1.5; font-weight: 600; }
+
+    /* ── STOP TIMELINE ── */
+    .stops-panel {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: slideUp 0.5s 0.3s ease both;
+    }
+
+    .stops-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.65rem 1rem;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .stops-title { font-size: 0.85rem; font-weight: 800; }
+
+    .stops-list {
+      display: flex;
+      padding: 0.85rem 1.25rem;
+      gap: 0;
+      overflow-x: auto;
+      align-items: flex-start;
+    }
+
+    .stop-item {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1; min-width: 80px; position: relative;
+    }
+
+    /* connector line */
+    .stop-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 13px; left: 50%;
+      width: 100%; height: 3px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .stop-item.done:not(:last-child)::after { background: var(--accent2); }
+    .stop-item.active:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--accent2) 40%, var(--border) 100%);
+    }
+
+    .stop-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 3px solid var(--border);
+      background: white; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem;
+      transition: all 0.3s;
+    }
+
+    .stop-item.done .stop-dot { background: var(--accent2); border-color: var(--accent2); }
+    .stop-item.active .stop-dot {
+      background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(247,127,42,0.2);
+      animation: stopPulse 2s ease-in-out infinite;
+    }
+
+    .stop-name {
+      font-size: 0.68rem; font-weight: 800; text-align: center;
+      margin-top: 6px; color: var(--muted); max-width: 70px;
+      line-height: 1.3;
+    }
+
+    .stop-item.done .stop-name { color: var(--accent2); }
+    .stop-item.active .stop-name { color: var(--accent); }
+
+    .stop-eta {
+      font-size: 0.63rem; font-weight: 700; color: var(--muted);
+      text-align: center; margin-top: 2px;
+    }
+
+    .stop-item.done .stop-eta { color: var(--accent2); }
+    .stop-item.active .stop-eta { color: var(--accent); }
+
+    /* ── NO TRIP STATE ── */
+    .no-trip {
+      text-align: center; padding: 3rem 1rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+    }
+
+    .no-trip .big { font-size: 3rem; }
+    .no-trip strong { font-size: 1.1rem; font-weight: 900; }
+    .no-trip p { font-size: 0.85rem; color: var(--muted); font-weight: 600; max-width: 300px; line-height: 1.6; }
+
+    .open-map-btn {
+      display: inline-block;
+      background: var(--accent2); color: white;
+      padding: 0.55rem 1.25rem; border-radius: 10px;
+      font-family: 'Nunito', sans-serif; font-weight: 900;
+      font-size: 0.85rem; text-decoration: none;
+      box-shadow: 0 4px 12px rgba(76,175,138,0.35);
+      margin-top: 0.25rem;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.88); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+    @keyframes stopPulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(247,127,42,0.2); }
+      50% { box-shadow: 0 0 0 8px rgba(247,127,42,0.05); }
+    }
+
+    /* ── PIN GATE ── */
+    #pin-gate {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: #1e1a16;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem;
+    }
+
+    #pin-gate.visible { display: flex; }
+
+    .pin-bus-emoji {
+      font-size: 3rem;
+      animation: wiggle 4s ease-in-out infinite;
+      margin-bottom: 0.5rem;
+    }
+
+    .pin-heading {
+      font-size: 1.6rem; font-weight: 900;
+      color: #fdf8f2; letter-spacing: -0.02em;
+      margin-bottom: 0.2rem; text-align: center;
+    }
+
+    .pin-heading em { font-style: italic; color: var(--accent); font-family: 'Lora', serif; }
+
+    .pin-sub {
+      font-size: 0.8rem; color: #9a8a78; font-weight: 600;
+      margin-bottom: 2rem; text-align: center;
+    }
+
+    .pin-dots {
+      display: flex; gap: 0.85rem; margin-bottom: 1.75rem;
+    }
+
+    .pin-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2.5px solid var(--accent);
+      background: transparent;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .pin-dot.filled {
+      background: var(--accent);
+      transform: scale(1.15);
+    }
+
+    .pin-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.65rem;
+      width: 100%; max-width: 260px;
+    }
+
+    .pin-btn {
+      background: #2e2820;
+      border: 1.5px solid #3d3328;
+      color: #fdf8f2;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.35rem; font-weight: 900;
+      padding: 0.9rem; border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+      user-select: none;
+    }
+
+    .pin-btn:active { background: var(--accent); transform: scale(0.93); }
+    .pin-btn.clear { font-size: 0.85rem; color: #9a8a78; }
+    .pin-btn.spacer { visibility: hidden; }
+
+    .pin-error {
+      color: #e05252; font-size: 0.82rem; font-weight: 700;
+      margin-top: 1rem; opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .pin-error.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ── PIN GATE ── -->
+<div id="pin-gate" class="visible">
+  <div class="pin-bus-emoji">🚌</div>
+  <div class="pin-heading">Your <em>Neighborhood</em> Ride</div>
+  <div class="pin-sub">Enter your trip PIN to continue</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn spacer"></button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn clear" onclick="pinClear()">⌫</button>
+  </div>
+  <div class="pin-error" id="pinError">Incorrect PIN — try again</div>
+</div>
+
+<div class="page">
+
+  <header>
+    <span class="bus-emoji">🚌</span>
+    <div class="header-text">
+      <h1 id="tripTitle">Your <em>Neighborhood</em> Ride</h1>
+      <p id="tripSubtitle">Live charter tracker</p>
+    </div>
+    <div class="header-right">
+      <span class="last-ping" id="lastPing"></span>
+      <div class="live-pill"><div class="live-dot"></div> Live</div>
+    </div>
+  </header>
+
+  <!-- ETA Bar -->
+  <div class="eta-bar" id="etaBar" style="display:none">
+    <div class="eta-item">
+      <span class="eta-label">Destination ETA</span>
+      <span class="eta-value highlight" id="etaDestination">—</span>
+    </div>
+    <div class="eta-divider"></div>
+    <div class="eta-item">
+      <span class="eta-label">Next Stop ETA</span>
+      <span class="eta-value" id="etaNextStop">—</span>
+    </div>
+    <div class="eta-divider"></div>
+    <div class="eta-item">
+      <span class="eta-label">Distance Left</span>
+      <span class="eta-value" id="distanceLeft">—</span>
+    </div>
+    <div class="eta-divider"></div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressFrom">Origin</span>
+        <span id="progressTo">Destination</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera + Map -->
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon">📷</div>
+        <span class="panel-title">Live Camera</span>
+        <span class="panel-sub">~15–30 sec delay</span>
+      </div>
+      <div class="panel-body" id="videoPanel">
+        <div class="placeholder">
+          <div class="big">📡</div>
+          <strong>No active trip</strong>
+          <span>Camera feed will appear here when a trip is in progress</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon">📍</div>
+        <span class="panel-title">Bus Location</span>
+        <span class="panel-sub">Real-time location</span>
+      </div>
+      <div class="panel-body" id="mapPanel">
+        <div class="placeholder">
+          <div class="big">🗺️</div>
+          <strong>No active trip</strong>
+          <span>Live map will appear here when a trip is in progress</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Timeline -->
+  <div class="stops-panel" id="stopsPanel" style="display:none">
+    <div class="stops-header">
+      <div class="panel-icon" style="width:28px;height:28px;font-size:1rem">🛣️</div>
+      <span class="stops-title">Trip Progress</span>
+    </div>
+    <div class="stops-list" id="stopsList"></div>
+  </div>
+
+  <!-- No trip state -->
+  <div class="no-trip" id="noTrip">
+    <div class="big">🚌</div>
+    <strong>No trip currently active</strong>
+    <p>When a charter trip is underway, you'll see the live camera, bus location, ETA, and stop-by-stop progress right here.</p>
+  </div>
+
+</div><!-- end .page -->
+
+<script>
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  // ────────────────────────────────────────────────────────────────────
+
+  const REFRESH_MS = 30000; // poll Supabase every 30 seconds
+
+  async function fetchTripState() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/trip_state?select=*&order=updated_at.desc&limit=1`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      const data = await res.json();
+      return data && data.length > 0 ? data[0] : null;
+    } catch(e) {
+      console.warn('Could not fetch trip state', e);
+      return null;
+    }
+  }
+
+  function formatTime(isoString) {
+    if (!isoString) return '—';
+    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function timeSince(isoString) {
+    if (!isoString) return '';
+    const mins = Math.floor((Date.now() - new Date(isoString)) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    return `${mins} mins ago`;
+  }
+
+  function renderTrip(state) {
+    if (!state || state.status === 'inactive') {
+      document.getElementById('noTrip').style.display = 'flex';
+      document.getElementById('etaBar').style.display = 'none';
+      document.getElementById('stopsPanel').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('noTrip').style.display = 'none';
+    document.getElementById('etaBar').style.display = 'flex';
+    document.getElementById('stopsPanel').style.display = 'block';
+
+    // Header
+    if (state.trip_name) {
+      document.getElementById('tripTitle').innerHTML = `<em>${state.trip_name}</em>`;
+      document.title = `${state.trip_name} — Live`;
+    }
+    if (state.destination) {
+      document.getElementById('tripSubtitle').textContent = `En route to ${state.destination}`;
+    }
+
+    // Last ping
+    if (state.updated_at) {
+      document.getElementById('lastPing').textContent = `Last update: ${timeSince(state.updated_at)}`;
+    }
+
+    // ETA values (calculated on bus, stored in Supabase)
+    document.getElementById('etaDestination').textContent = state.eta_destination || '—';
+    document.getElementById('etaNextStop').textContent = state.eta_next_stop || '—';
+    document.getElementById('distanceLeft').textContent = state.distance_remaining || '—';
+
+    // Progress bar
+    const pct = state.progress_pct || 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressFrom').textContent = state.origin || 'Origin';
+    document.getElementById('progressTo').textContent = state.destination || 'Destination';
+
+    // YouTube feed
+    if (state.youtube_id) {
+      const vp = document.getElementById('videoPanel');
+      if (!vp.querySelector('iframe')) {
+        vp.innerHTML = `<iframe src="https://www.youtube.com/embed/${state.youtube_id}?autoplay=1&rel=0"
+          frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>`;
+      }
+    }
+
+    // Map
+    if (state.maps_url) {
+      const mp = document.getElementById('mapPanel');
+      if (!mp.querySelector('iframe') && state.maps_url.includes('google.com/maps')) {
+        mp.innerHTML = `<iframe src="${state.maps_url}" allowfullscreen loading="lazy"></iframe>`;
+      } else if (!mp.querySelector('iframe') && !mp.querySelector('a')) {
+        mp.innerHTML = `<div class="placeholder">
+          <div class="big">📍</div>
+          <strong>Bus is on the move</strong>
+          <a href="${state.maps_url}" target="_blank" class="open-map-btn">Open Live Map →</a>
+        </div>`;
+      }
+    }
+
+    // Stop timeline
+    if (state.stops && Array.isArray(state.stops)) {
+      const list = document.getElementById('stopsList');
+      list.innerHTML = '';
+      state.stops.forEach((stop, i) => {
+        const div = document.createElement('div');
+        div.className = `stop-item ${stop.status || ''}`;
+        div.innerHTML = `
+          <div class="stop-dot">${stop.status === 'done' ? '✓' : stop.status === 'active' ? '🚌' : ''}</div>
+          <div class="stop-name">${stop.name}</div>
+          <div class="stop-eta">${stop.status === 'done' ? (stop.departed ? 'Dep. ' + formatTime(stop.departed) : 'Done') : (stop.eta || '')}</div>
+        `;
+        list.appendChild(div);
+      });
+    }
+  }
+
+  async function refresh() {
+    const state = await fetchTripState();
+    renderTrip(state);
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+
+  // ── PIN GATE LOGIC ────────────────────────────────────────────────────
+  let pinEntry = '';
+
+  function checkAutoPin() {
+    const params = new URLSearchParams(window.location.search);
+    const urlPin = params.get('pin');
+    if (urlPin && urlPin.length === 4) {
+      verifyPin(urlPin);
+    }
+  }
+
+  async function fetchCurrentPin() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/trip_state?select=access_pin&order=updated_at.desc&limit=1`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      const data = await res.json();
+      return data && data.length > 0 ? data[0].access_pin : null;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  async function verifyPin(attempt) {
+    const correctPin = await fetchCurrentPin();
+    if (!correctPin) {
+      // No pin set yet — allow entry (trip not configured)
+      unlockPage();
+      return;
+    }
+    if (attempt === String(correctPin)) {
+      unlockPage();
+    } else {
+      pinEntry = '';
+      updateDots();
+      const err = document.getElementById('pinError');
+      err.classList.add('show');
+      setTimeout(() => err.classList.remove('show'), 2500);
+    }
+  }
+
+  function unlockPage() {
+    document.getElementById('pin-gate').classList.remove('visible');
+  }
+
+  function pinPress(digit) {
+    if (pinEntry.length >= 4) return;
+    pinEntry += digit;
+    updateDots();
+    if (pinEntry.length === 4) {
+      setTimeout(() => verifyPin(pinEntry), 150);
+    }
+  }
+
+  function pinClear() {
+    pinEntry = pinEntry.slice(0, -1);
+    updateDots();
+  }
+
+  function updateDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('pd' + i).classList.toggle('filled', i < pinEntry.length);
+    }
+  }
+
+  // Check for PIN in URL on load (QR code auto-login)
+  checkAutoPin();
+</script>
+</body>
+</html>
