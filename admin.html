@@ -376,11 +376,11 @@
         </div>
         <div class="field full">
           <label>Origin (full address)</label>
-          <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS" />
+          <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS" oninput="renderStops()" />
         </div>
         <div class="field full">
           <label>Destination (full address)</label>
-          <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO" />
+          <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO" oninput="renderStops()" />
         </div>
         <div class="field full">
           <label>Google Maps Share Link (for passenger map)</label>
@@ -429,10 +429,12 @@
       <div class="field" style="margin-bottom:0.75rem">
         <label>Ping Frequency</label>
         <select id="pingFrequency">
-          <option value="5">Every 5 minutes (short trips ~50 miles)</option>
-          <option value="10">Every 10 minutes (medium trips ~2 hrs)</option>
-          <option value="20" selected>Every 20 minutes (long trips 4+ hrs)</option>
-          <option value="30">Every 30 minutes (very long trips)</option>
+          <option value="1.5">Every 90 seconds</option>
+          <option value="3">Every 3 minutes</option>
+          <option value="5">Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+          <option value="20" selected>Every 20 minutes</option>
+          <option value="30">Every 30 minutes</option>
         </select>
       </div>
       <div class="gps-row">
@@ -533,9 +535,9 @@
   // ── STOPS ─────────────────────────────────────────────────────────────
   function loadDefaultStops() {
     if (stops.length === 0) {
-      addStop('Origin', '', false);
-      addStop('', '', true);
-      addStop('Destination', '', false);
+      addStop('', '', false); // origin — name pulled from trip details
+      addStop('', '', true);  // middle stop
+      addStop('', '', false); // destination — name pulled from trip details
     }
   }
 
@@ -552,22 +554,46 @@
 
   function renderStops() {
     const list = document.getElementById('stopsList');
+    const originVal = document.getElementById('tripOrigin').value.trim() || 'Origin';
+    const destVal   = document.getElementById('tripDest').value.trim()   || 'Destination';
+
+    // Keep first/last stop names in sync with trip details
+    if (stops.length > 0) stops[0].name = originVal;
+    if (stops.length > 1) stops[stops.length - 1].name = destVal;
+
     list.innerHTML = '';
     stops.forEach((stop, i) => {
+      const isOrigin = i === 0;
+      const isDest   = i === stops.length - 1;
+      const isLocked = isOrigin || isDest;
       const row = document.createElement('div');
       row.className = 'stop-row';
-      row.innerHTML = `
-        <div class="stop-num">${i + 1}</div>
-        <div class="stop-inputs">
-          <input type="text" placeholder="Stop name (e.g. McDonald's Topeka)" value="${stop.name}"
-            oninput="stops[${i}].name = this.value" />
-          <input type="text" placeholder="Full address" value="${stop.address}"
-            oninput="stops[${i}].address = this.value" />
-          <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
-            oninput="stops[${i}].duration = this.value" style="max-width:140px" />
-        </div>
-        ${i > 0 && i < stops.length - 1 ? `<button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>` : ''}
-      `;
+
+      if (isLocked) {
+        // Origin and destination — display only, no editing
+        row.innerHTML = `
+          <div class="stop-num" style="background:${isOrigin ? 'var(--accent2)' : 'var(--accent)'}">${i + 1}</div>
+          <div class="stop-inputs">
+            <input type="text" value="${stop.name}" disabled
+              style="opacity:0.6;cursor:not-allowed;flex:2" />
+            <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
+              oninput="stops[${i}].duration = this.value" style="max-width:140px" />
+          </div>
+        `;
+      } else {
+        row.innerHTML = `
+          <div class="stop-num">${i + 1}</div>
+          <div class="stop-inputs">
+            <input type="text" placeholder="Stop name (e.g. McDonald's Topeka)" value="${stop.name}"
+              oninput="stops[${i}].name = this.value" />
+            <input type="text" placeholder="Full address for ETA" value="${stop.address || ''}"
+              oninput="stops[${i}].address = this.value" />
+            <input type="text" placeholder="Duration (e.g. 20 min)" value="${stop.duration || ''}"
+              oninput="stops[${i}].duration = this.value" style="max-width:120px" />
+          </div>
+          <button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>
+        `;
+      }
       list.appendChild(row);
     });
   }
@@ -588,7 +614,7 @@
     } else {
       icon.textContent = '🟢';
       title.textContent = document.getElementById('tripName').value || 'Trip in progress';
-      desc.textContent  = 'GPS pinging every 20 minutes — passengers can see live updates';
+      desc.textContent  = '🟢 Trip active';
       acts.innerHTML = `<button class="btn btn-danger" onclick="endTrip()">■ End Trip</button>`;
       document.getElementById('stopControlCard').style.display = 'block';
       renderStopButtons();
