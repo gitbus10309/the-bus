@@ -337,6 +337,10 @@
           <input type="text" id="cfgGoogleKey" placeholder="AIza..." />
         </div>
         <div class="field">
+          <label>Cloudflare Worker URL</label>
+          <input type="text" id="cfgWorkerUrl" placeholder="https://bus-eta-proxy.yourname.workers.dev" />
+        </div>
+        <div class="field">
           <label>YouTube Live Video ID</label>
           <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" />
         </div>
@@ -422,6 +426,15 @@
       <span class="card-title">GPS Pinger</span>
     </div>
     <div class="card-body">
+      <div class="field" style="margin-bottom:0.75rem">
+        <label>Ping Frequency</label>
+        <select id="pingFrequency">
+          <option value="5">Every 5 minutes (short trips ~50 miles)</option>
+          <option value="10">Every 10 minutes (medium trips ~2 hrs)</option>
+          <option value="20" selected>Every 20 minutes (long trips 4+ hrs)</option>
+          <option value="30">Every 30 minutes (very long trips)</option>
+        </select>
+      </div>
       <div class="gps-row">
         <div class="gps-dot" id="gpsDot"></div>
         <div>
@@ -461,13 +474,19 @@
   let stops = [];
   let stopStatuses = [];
 
-  const PING_INTERVAL_MS = 20 * 60 * 1000; // 20 minutes
+  const PING_INTERVAL_MS = 20 * 60 * 1000; // default, overridden by dropdown
+
+  function getPingIntervalMs() {
+    const mins = parseInt(document.getElementById('pingFrequency').value) || 20;
+    return mins * 60 * 1000;
+  }
 
   // ── LOAD SAVED KEYS ──────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cfgSupabaseUrl').value  = localStorage.getItem('supabaseUrl')  || '';
     document.getElementById('cfgSupabaseKey').value  = localStorage.getItem('supabaseKey')  || '';
     document.getElementById('cfgGoogleKey').value    = localStorage.getItem('googleKey')    || '';
+    document.getElementById('cfgWorkerUrl').value    = localStorage.getItem('workerUrl')    || '';
     document.getElementById('cfgYoutubeId').value    = localStorage.getItem('youtubeId')    || '';
     document.getElementById('cfgSiteUrl').value      = localStorage.getItem('siteUrl')      || '';
     loadDefaultStops();
@@ -478,6 +497,7 @@
     localStorage.setItem('supabaseUrl', document.getElementById('cfgSupabaseUrl').value.trim());
     localStorage.setItem('supabaseKey', document.getElementById('cfgSupabaseKey').value.trim());
     localStorage.setItem('googleKey',   document.getElementById('cfgGoogleKey').value.trim());
+    localStorage.setItem('workerUrl',   document.getElementById('cfgWorkerUrl').value.trim());
     localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
     localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
     flashBtn(event.target, '✓ Saved!');
@@ -621,19 +641,19 @@
     document.getElementById('gpsDot').className = 'gps-dot active';
     document.getElementById('gpsText').textContent = 'Getting GPS...';
 
-    pingInterval = setInterval(doPing, PING_INTERVAL_MS);
+    pingInterval = setInterval(doPing, getPingIntervalMs());
     startCountdown();
   }
 
   function stopGpsPinger() {
-    if (pingInterval)    { clearInterval(pingInterval);    pingInterval    = null; }
+    if (pingInterval)      { clearInterval(pingInterval);      pingInterval      = null; }
     if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
     nextPingAt = null;
     document.getElementById('nextPingBadge').textContent = '—';
   }
 
   function startCountdown() {
-    nextPingAt = Date.now() + PING_INTERVAL_MS;
+    nextPingAt = Date.now() + getPingIntervalMs();
     if (countdownInterval) clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((nextPingAt - Date.now()) / 1000));
@@ -699,21 +719,26 @@
     });
   }
 
-  // ── GOOGLE DIRECTIONS ─────────────────────────────────────────────────
+  // ── GOOGLE DIRECTIONS (via Cloudflare Worker proxy) ──────────────────
   async function getETAFromGoogle(lat, lng) {
-    const dest    = document.getElementById('tripDest').value.trim();
-    const apiKey  = getGoogleKey();
-    const origin  = `${lat},${lng}`;
+    const dest      = document.getElementById('tripDest').value.trim();
+    const apiKey    = getGoogleKey();
+    const workerUrl = getWorkerUrl();
+    const origin    = `${lat},${lng}`;
 
-    // Find next incomplete stop to get that ETA too
+    if (!workerUrl) {
+      addLog('Cloudflare Worker URL not set — skipping ETA', 'err');
+      return {};
+    }
+
+    // Find next incomplete stop
     const nextStop = stopStatuses.find(s => s.status === 'upcoming' && s.address);
     let etaNextStop = '—';
 
     try {
-      // ETA to final destination
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&departure_time=now&traffic_model=best_guess&key=${apiKey}`;
-
-      const res  = await fetch(url);
+      // ETA to final destination — via proxy
+      const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}`;
+      const res  = await fetch(proxyUrl);
       const data = await res.json();
 
       if (data.status !== 'OK') {
@@ -721,20 +746,17 @@
         return {};
       }
 
-      const leg = data.routes[0].legs[0];
+      const leg          = data.routes[0].legs[0];
       const durationSecs = leg.duration_in_traffic?.value || leg.duration.value;
       const arrivalTime  = new Date(Date.now() + durationSecs * 1000);
       const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const distStr      = leg.distance.text;
+      const distMeters   = leg.distance.value;
 
-      // Progress % — compare distance remaining vs total
-      // We approximate total by departure distance (stored first ping)
-      const distMeters = leg.distance.value;
-
-      // ETA to next stop
+      // ETA to next stop — via proxy
       if (nextStop?.address) {
-        const url2 = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&departure_time=now&key=${apiKey}`;
-        const res2  = await fetch(url2);
+        const proxyUrl2 = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&key=${encodeURIComponent(apiKey)}`;
+        const res2  = await fetch(proxyUrl2);
         const data2 = await res2.json();
         if (data2.status === 'OK') {
           const secs2 = data2.routes[0].legs[0].duration_in_traffic?.value || data2.routes[0].legs[0].duration.value;
@@ -746,10 +768,10 @@
       addLog(`ETA to ${dest.split(',')[0]}: ${etaStr} · ${distStr} remaining`, 'ok');
 
       return {
-        eta_destination:  etaStr,
-        eta_next_stop:    etaNextStop,
+        eta_destination:    etaStr,
+        eta_next_stop:      etaNextStop,
         distance_remaining: distStr,
-        progress_pct:     Math.max(0, Math.min(99, Math.round(100 - (distMeters / 400000) * 100)))
+        progress_pct:       Math.max(0, Math.min(99, Math.round(100 - (distMeters / 400000) * 100)))
       };
 
     } catch(e) {
@@ -841,6 +863,7 @@
   function getSupabaseUrl()  { return localStorage.getItem('supabaseUrl')  || document.getElementById('cfgSupabaseUrl').value.trim(); }
   function getSupabaseKey()  { return localStorage.getItem('supabaseKey')  || document.getElementById('cfgSupabaseKey').value.trim(); }
   function getGoogleKey()    { return localStorage.getItem('googleKey')    || document.getElementById('cfgGoogleKey').value.trim(); }
+  function getWorkerUrl()    { return localStorage.getItem('workerUrl')    || document.getElementById('cfgWorkerUrl').value.trim(); }
 </script>
 </body>
 </html>
