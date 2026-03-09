@@ -6,6 +6,7 @@
   <title>Live Trip Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@1,400&display=swap" rel="stylesheet">
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZpclH1bQg3CjH99NapCrW0P3hRDlU-7E&callback=initMap" async defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -383,14 +384,15 @@
       <div class="panel-header">
         <div class="panel-icon">📍</div>
         <span class="panel-title">Bus Location</span>
-        <span class="panel-sub">Real-time location</span>
+        <span class="panel-sub" id="mapLastUpdate">Waiting for first ping...</span>
       </div>
       <div class="panel-body" id="mapPanel">
-        <div class="placeholder">
+        <div class="placeholder" id="mapPlaceholder">
           <div class="big">🗺️</div>
           <strong>No active trip</strong>
           <span>Live map will appear here when a trip is in progress</span>
         </div>
+        <div id="busMap" style="position:absolute;inset:0;width:100%;height:100%;display:none"></div>
       </div>
     </div>
   </div>
@@ -497,17 +499,18 @@
       }
     }
 
-    // Map
-    if (state.maps_url) {
-      const mp = document.getElementById('mapPanel');
-      if (!mp.querySelector('iframe') && state.maps_url.includes('google.com/maps')) {
-        mp.innerHTML = `<iframe src="${state.maps_url}" allowfullscreen loading="lazy"></iframe>`;
-      } else if (!mp.querySelector('iframe') && !mp.querySelector('a')) {
-        mp.innerHTML = `<div class="placeholder">
-          <div class="big">📍</div>
-          <strong>Bus is on the move</strong>
-          <a href="${state.maps_url}" target="_blank" class="open-map-btn">Open Live Map →</a>
-        </div>`;
+    // Map — embedded Google Maps with bus marker
+    if (state.lat && state.lng) {
+      const pos = { lat: parseFloat(state.lat), lng: parseFloat(state.lng) };
+      document.getElementById('mapPlaceholder').style.display = 'none';
+      document.getElementById('busMap').style.display = 'block';
+      document.getElementById('mapLastUpdate').textContent = `Updated: ${timeSince(state.updated_at)}`;
+
+      if (!window.busMap) {
+        // Map not initialized yet — wait for initMap callback
+        window.pendingBusPos = pos;
+      } else {
+        updateBusMarker(pos);
       }
     }
 
@@ -531,6 +534,48 @@
   async function refresh() {
     const state = await fetchTripState();
     renderTrip(state);
+  }
+
+  // ── GOOGLE MAPS ───────────────────────────────────────────────────────
+  window.initMap = function() {
+    // Default center — middle of US, will move to bus on first ping
+    window.busMap = new google.maps.Map(document.getElementById('busMap'), {
+      zoom: 10,
+      center: { lat: 38.5, lng: -98.0 },
+      mapTypeId: 'roadmap',
+      disableDefaultUI: false,
+      zoomControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      mapTypeControl: false,
+    });
+
+    // Custom bus marker
+    window.busMarker = new google.maps.Marker({
+      map: window.busMap,
+      title: 'Bus Location',
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" fill="#f77f2a" stroke="white" stroke-width="3"/>
+            <text x="20" y="26" text-anchor="middle" font-size="18">🚌</text>
+          </svg>`),
+        scaledSize: new google.maps.Size(40, 40),
+        anchor: new google.maps.Point(20, 20),
+      }
+    });
+
+    // If we already have a position waiting, use it
+    if (window.pendingBusPos) {
+      updateBusMarker(window.pendingBusPos);
+      window.pendingBusPos = null;
+    }
+  };
+
+  function updateBusMarker(pos) {
+    if (!window.busMap || !window.busMarker) return;
+    window.busMarker.setPosition(pos);
+    window.busMap.panTo(pos);
   }
 
   refresh();
