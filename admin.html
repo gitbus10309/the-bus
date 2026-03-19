@@ -6,6 +6,7 @@
   <title>Trip Admin — Bus Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@1,400&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -388,21 +389,31 @@
         </div>
         <div class="field">
           <label>Passenger PIN (4 digits)</label>
-          <input type="text" id="tripPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="e.g. 7392" />
+          <input type="text" id="tripPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="e.g. 7392" oninput="updateQrCode()" />
         </div>
-        <div class="field" style="display:flex;align-items:flex-end;gap:0.5rem">
-          <div style="flex:1">
-            <label>QR Code Link Preview</label>
-            <input type="text" id="qrPreview" readonly style="font-size:0.72rem;color:var(--muted);cursor:text" placeholder="Enter your GitHub Pages URL in Settings first" />
+      </div>
+
+      <!-- QR Code Display -->
+      <div id="qrSection" style="display:none;margin-top:1rem">
+        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem">
+            <canvas id="qrCanvas" style="border-radius:12px;border:3px solid var(--border)"></canvas>
+            <span style="font-size:0.7rem;color:var(--muted);font-weight:700">Scan to join trip</span>
+          </div>
+          <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:0.5rem">
+            <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Passenger Link</div>
+            <input type="text" id="qrPreview" readonly
+              style="background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:0.5rem 0.75rem;font-size:0.72rem;color:var(--muted);font-family:monospace;width:100%" />
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button class="btn btn-green" onclick="downloadQr()">⬇ Download QR</button>
+              <button class="btn btn-primary" onclick="shareQr()">↗ Share QR</button>
+            </div>
           </div>
         </div>
       </div>
-      <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-outline" onclick="generateQrLink()">🔗 Preview QR Link</button>
-        <button class="btn btn-outline" onclick="openQrGenerator()">📱 Open QR Generator</button>
-      </div>
+
       <div class="keys-note" style="margin-top:0.75rem">
-        Set a new 4-digit PIN for each charter. Passengers scan the QR code (which includes the PIN) and go straight in — no typing needed. Change the PIN after each trip to lock out previous passengers.
+        Set a new 4-digit PIN for each charter. Passengers scan the QR code and go straight in — no typing needed. Change the PIN after each trip to lock out previous passengers.
       </div>
     </div>
   </div>
@@ -493,6 +504,7 @@
     document.getElementById('cfgSiteUrl').value      = localStorage.getItem('siteUrl')      || '';
     loadDefaultStops();
     updateStatusCard();
+    setTimeout(updateQrCode, 200); // generate QR if site URL + PIN already saved
   });
 
   function saveKeys() {
@@ -503,6 +515,7 @@
     localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
     localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
     flashBtn(event.target, '✓ Saved!');
+    updateQrCode();
   }
 
   function buildQrUrl() {
@@ -513,24 +526,87 @@
     return base;
   }
 
-  function generateQrLink() {
+  function updateQrCode() {
     const url = buildQrUrl();
-    if (!url) {
-      alert('Enter your GitHub Pages URL in the API Keys section first.');
-      return;
-    }
+    if (!url) return;
+
+    document.getElementById('qrSection').style.display = 'block';
     document.getElementById('qrPreview').value = url;
+
+    const canvas = document.getElementById('qrCanvas');
+    const size = 180;
+    canvas.width  = size;
+    canvas.height = size;
+
+    // Use QRCode library to draw to canvas
+    const tempDiv = document.createElement('div');
+    new QRCode(tempDiv, {
+      text: url,
+      width: size,
+      height: size,
+      colorDark: '#2c2416',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    // QRCode renders an img — copy to canvas
+    setTimeout(() => {
+      const img = tempDiv.querySelector('img');
+      if (img) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
+      }
+    }, 100);
   }
 
-  function openQrGenerator() {
+  function downloadQr() {
     const url = buildQrUrl();
-    if (!url) {
-      alert('Enter your GitHub Pages URL in the API Keys section first.');
-      return;
-    }
-    document.getElementById('qrPreview').value = url;
-    window.open(`https://qr.io/?url=${encodeURIComponent(url)}`, '_blank');
+    if (!url) { alert('Enter your site URL in API Keys first.'); return; }
+    updateQrCode();
+    setTimeout(() => {
+      const canvas = document.getElementById('qrCanvas');
+      const link = document.createElement('a');
+      link.download = 'bus-trip-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }, 200);
   }
+
+  async function shareQr() {
+    const url = buildQrUrl();
+    if (!url) { alert('Enter your site URL in API Keys first.'); return; }
+    updateQrCode();
+
+    setTimeout(async () => {
+      const canvas = document.getElementById('qrCanvas');
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'bus-trip-qr.png', { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: 'Bus Trip Live Tracker',
+              text: `Join the live trip tracker: ${url}`,
+              files: [file]
+            });
+          } catch(e) {
+            // Fallback to download if share cancelled
+            downloadQr();
+          }
+        } else {
+          // Fallback — copy link to clipboard
+          navigator.clipboard.writeText(url).then(() => {
+            alert('Link copied to clipboard!\n\n' + url);
+          });
+        }
+      }, 'image/png');
+    }, 200);
+  }
+
+  function generateQrLink() { updateQrCode(); }
+  function openQrGenerator() { updateQrCode(); }
 
   // ── STOPS ─────────────────────────────────────────────────────────────
   function loadDefaultStops() {
