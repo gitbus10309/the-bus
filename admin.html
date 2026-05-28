@@ -67,10 +67,8 @@
     }
 
     .status-icon { font-size: 2rem; flex-shrink: 0; }
-
     .status-text h2 { font-size: 0.95rem; font-weight: 900; }
     .status-text p { font-size: 0.78rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
-
     .status-actions { margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
 
     .btn {
@@ -83,28 +81,11 @@
 
     .btn:active { transform: scale(0.96); }
 
-    .btn-primary {
-      background: var(--accent); color: white;
-      box-shadow: 0 3px 10px rgba(247,127,42,0.35);
-    }
-
+    .btn-primary { background: var(--accent); color: white; box-shadow: 0 3px 10px rgba(247,127,42,0.35); }
     .btn-primary:hover { box-shadow: 0 5px 14px rgba(247,127,42,0.4); transform: translateY(-1px); }
-
-    .btn-green {
-      background: var(--accent2); color: white;
-      box-shadow: 0 3px 10px rgba(76,175,138,0.3);
-    }
-
-    .btn-danger {
-      background: var(--danger); color: white;
-      box-shadow: 0 3px 10px rgba(224,82,82,0.3);
-    }
-
-    .btn-outline {
-      background: transparent; color: var(--text);
-      border: 2px solid var(--border);
-    }
-
+    .btn-green { background: var(--accent2); color: white; box-shadow: 0 3px 10px rgba(76,175,138,0.3); }
+    .btn-danger { background: var(--danger); color: white; box-shadow: 0 3px 10px rgba(224,82,82,0.3); }
+    .btn-outline { background: transparent; color: var(--text); border: 2px solid var(--border); }
     .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── CARDS ── */
@@ -136,7 +117,6 @@
     }
 
     .card-title { font-size: 0.85rem; font-weight: 800; }
-
     .card-body { padding: 1.1rem; }
 
     /* ── FORM FIELDS ── */
@@ -148,7 +128,6 @@
     @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
 
     .field { display: flex; flex-direction: column; gap: 4px; }
-
     .field.full { grid-column: 1 / -1; }
 
     .field label {
@@ -171,6 +150,57 @@
     }
 
     .field input::placeholder { color: #c9b9a8; }
+
+    /* ── ADDRESS BOOK ── */
+    .addr-wrap { position: relative; }
+
+    .addr-wrap input { padding-right: 2.2rem; }
+
+    .addr-save-btn {
+      position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 0.9rem; color: var(--muted); padding: 2px;
+      transition: color 0.2s;
+    }
+
+    .addr-save-btn:hover { color: var(--accent2); }
+
+    .addr-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: 10px; box-shadow: var(--shadow);
+      z-index: 100; max-height: 200px; overflow-y: auto;
+      display: none;
+    }
+
+    .addr-dropdown.open { display: block; }
+
+    .addr-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 0.85rem;
+      cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .addr-item:last-child { border-bottom: none; }
+    .addr-item:hover { background: var(--surface2); }
+
+    .addr-item-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .addr-item-del {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 0.8rem; padding: 2px 4px;
+      border-radius: 4px; flex-shrink: 0;
+      transition: color 0.2s;
+    }
+
+    .addr-item-del:hover { color: var(--danger); }
+
+    .addr-empty {
+      padding: 0.75rem; text-align: center;
+      font-size: 0.78rem; color: var(--muted); font-weight: 600;
+    }
 
     /* ── STOPS ── */
     .stop-row {
@@ -312,9 +342,7 @@
       <h2 id="statusTitle">No active trip</h2>
       <p id="statusDesc">Set up a trip below and hit Start</p>
     </div>
-    <div class="status-actions" id="statusActions">
-      <!-- filled by JS -->
-    </div>
+    <div class="status-actions" id="statusActions"></div>
   </div>
 
   <!-- API Keys -->
@@ -377,15 +405,34 @@
         </div>
         <div class="field full">
           <label>Origin (full address)</label>
-          <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS" oninput="renderStops()" />
+          <div class="addr-wrap" id="wrap-tripOrigin">
+            <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS"
+              oninput="renderStops(); onAddrInput('tripOrigin')"
+              onfocus="openAddrDropdown('tripOrigin')"
+              onblur="closeAddrDropdown('tripOrigin')" autocomplete="off" />
+            <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripOrigin')">💾</button>
+            <div class="addr-dropdown" id="dd-tripOrigin"></div>
+          </div>
         </div>
         <div class="field full">
           <label>Destination (full address)</label>
-          <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO" oninput="renderStops()" />
+          <div class="addr-wrap" id="wrap-tripDest">
+            <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO"
+              oninput="renderStops(); onAddrInput('tripDest')"
+              onfocus="openAddrDropdown('tripDest')"
+              onblur="closeAddrDropdown('tripDest')" autocomplete="off" />
+            <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripDest')">💾</button>
+            <div class="addr-dropdown" id="dd-tripDest"></div>
+          </div>
         </div>
         <div class="field full">
           <label>Google Maps Share Link (for passenger map)</label>
           <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+        </div>
+        <div class="field full">
+          <label>Trip Message (shown to passengers on the tracker page)</label>
+          <textarea id="tripMessage" rows="4" placeholder="e.g. Welcome aboard! Departure is at 10:00am. Stops: Topeka (approx 11:30am), KC arrival approx 1:00pm. Questions? Text 316-555-0000."
+            style="background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:0.55rem 0.85rem;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600;color:var(--text);outline:none;width:100%;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;line-height:1.6"></textarea>
         </div>
         <div class="field">
           <label>Passenger PIN (4 digits)</label>
@@ -439,12 +486,12 @@
     <div class="card-body">
       <div class="field" style="margin-bottom:0.75rem">
         <label>Ping Frequency</label>
-        <select id="pingFrequency">
-          <option value="1.5">Every 90 seconds</option>
+        <select id="pingFrequency" onchange="savePingFrequency()">
+          <option value="1.5" selected>Every 90 seconds</option>
           <option value="3">Every 3 minutes</option>
           <option value="5">Every 5 minutes</option>
           <option value="10">Every 10 minutes</option>
-          <option value="20" selected>Every 20 minutes</option>
+          <option value="20">Every 20 minutes</option>
           <option value="30">Every 30 minutes</option>
         </select>
       </div>
@@ -487,24 +534,140 @@
   let stops = [];
   let stopStatuses = [];
 
-  const PING_INTERVAL_MS = 20 * 60 * 1000; // default, overridden by dropdown
-
   function getPingIntervalMs() {
-    const mins = parseInt(document.getElementById('pingFrequency').value) || 20;
+    const mins = parseFloat(document.getElementById('pingFrequency').value) || 1.5;
     return mins * 60 * 1000;
+  }
+
+  // ── ADDRESS BOOK ─────────────────────────────────────────────────────
+  function getAddressBook() {
+    try { return JSON.parse(localStorage.getItem('addressBook') || '[]'); } catch { return []; }
+  }
+
+  function saveAddressBook(book) {
+    localStorage.setItem('addressBook', JSON.stringify(book));
+  }
+
+  function saveAddr(fieldId) {
+    const val = document.getElementById(fieldId).value.trim();
+    if (!val) return;
+    const book = getAddressBook();
+    if (!book.includes(val)) {
+      book.unshift(val);
+      if (book.length > 30) book.pop(); // keep max 30
+      saveAddressBook(book);
+      flashSaveBtn(fieldId);
+    }
+  }
+
+  function flashSaveBtn(fieldId) {
+    const btn = document.querySelector(`#wrap-${fieldId} .addr-save-btn`);
+    if (!btn) return;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = '💾', 1500);
+  }
+
+  function deleteAddr(val) {
+    const book = getAddressBook().filter(a => a !== val);
+    saveAddressBook(book);
+  }
+
+  function openAddrDropdown(fieldId) {
+    renderAddrDropdown(fieldId, document.getElementById(fieldId).value);
+    document.getElementById(`dd-${fieldId}`).classList.add('open');
+  }
+
+  function closeAddrDropdown(fieldId) {
+    setTimeout(() => {
+      const dd = document.getElementById(`dd-${fieldId}`);
+      if (dd) dd.classList.remove('open');
+    }, 200);
+  }
+
+  function onAddrInput(fieldId) {
+    renderAddrDropdown(fieldId, document.getElementById(fieldId).value);
+    const dd = document.getElementById(`dd-${fieldId}`);
+    if (dd) dd.classList.add('open');
+  }
+
+  function renderAddrDropdown(fieldId, filter) {
+    const dd = document.getElementById(`dd-${fieldId}`);
+    if (!dd) return;
+    const book = getAddressBook();
+    const filtered = filter
+      ? book.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+      : book;
+
+    if (filtered.length === 0) {
+      dd.innerHTML = `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet — type one and tap 💾' : 'No matches'}</div>`;
+      return;
+    }
+
+    dd.innerHTML = filtered.map(addr => `
+      <div class="addr-item">
+        <span class="addr-item-text" onmousedown="event.preventDefault(); pickAddr('${fieldId}', ${JSON.stringify(addr)})">${addr}</span>
+        <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddrAndRefresh('${fieldId}', ${JSON.stringify(addr)})" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function pickAddr(fieldId, val) {
+    document.getElementById(fieldId).value = val;
+    document.getElementById(`dd-${fieldId}`).classList.remove('open');
+    if (fieldId === 'tripOrigin' || fieldId === 'tripDest') renderStops();
+  }
+
+  function deleteAddrAndRefresh(fieldId, val) {
+    deleteAddr(val);
+    renderAddrDropdown(fieldId, document.getElementById(fieldId).value);
+  }
+
+  // Stop address book helper — used inline in renderStops
+  function stopAddrPick(idx, val) {
+    stops[idx].address = val;
+    // Close any open dropdowns by re-rendering
+    renderStops();
+  }
+
+  function stopAddrSave(idx) {
+    const val = (stops[idx].address || '').trim();
+    if (!val) return;
+    const book = getAddressBook();
+    if (!book.includes(val)) {
+      book.unshift(val);
+      if (book.length > 30) book.pop();
+      saveAddressBook(book);
+    }
+  }
+
+  // ── PING FREQUENCY PERSISTENCE ────────────────────────────────────────
+  function savePingFrequency() {
+    localStorage.setItem('pingFrequency', document.getElementById('pingFrequency').value);
+  }
+
+  function loadPingFrequency() {
+    const saved = localStorage.getItem('pingFrequency');
+    if (saved) {
+      const sel = document.getElementById('pingFrequency');
+      // Check if saved value exists as an option
+      const opt = Array.from(sel.options).find(o => o.value === saved);
+      if (opt) sel.value = saved;
+    }
+    // If nothing saved, dropdown already defaults to 90 seconds (first option, selected attr)
   }
 
   // ── LOAD SAVED KEYS ──────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('cfgSupabaseUrl').value  = localStorage.getItem('supabaseUrl')  || '';
-    document.getElementById('cfgSupabaseKey').value  = localStorage.getItem('supabaseKey')  || '';
-    document.getElementById('cfgGoogleKey').value    = localStorage.getItem('googleKey')    || '';
-    document.getElementById('cfgWorkerUrl').value    = localStorage.getItem('workerUrl')    || '';
-    document.getElementById('cfgYoutubeId').value    = localStorage.getItem('youtubeId')    || '';
-    document.getElementById('cfgSiteUrl').value      = localStorage.getItem('siteUrl')      || '';
+    document.getElementById('cfgSupabaseUrl').value = localStorage.getItem('supabaseUrl') || '';
+    document.getElementById('cfgSupabaseKey').value = localStorage.getItem('supabaseKey') || '';
+    document.getElementById('cfgGoogleKey').value   = localStorage.getItem('googleKey')   || '';
+    document.getElementById('cfgWorkerUrl').value   = localStorage.getItem('workerUrl')   || '';
+    document.getElementById('cfgYoutubeId').value   = localStorage.getItem('youtubeId')   || '';
+    document.getElementById('cfgSiteUrl').value     = localStorage.getItem('siteUrl')     || '';
+    loadPingFrequency();
     loadDefaultStops();
     updateStatusCard();
-    setTimeout(updateQrCode, 200); // generate QR if site URL + PIN already saved
+    setTimeout(updateQrCode, 200);
   });
 
   function saveKeys() {
@@ -538,7 +701,6 @@
     canvas.width  = size;
     canvas.height = size;
 
-    // Use QRCode library to draw to canvas
     const tempDiv = document.createElement('div');
     new QRCode(tempDiv, {
       text: url,
@@ -549,7 +711,6 @@
       correctLevel: QRCode.CorrectLevel.H
     });
 
-    // QRCode renders an img — copy to canvas
     setTimeout(() => {
       const img = tempDiv.querySelector('img');
       if (img) {
@@ -583,23 +744,12 @@
       const canvas = document.getElementById('qrCanvas');
       canvas.toBlob(async (blob) => {
         const file = new File([blob], 'bus-trip-qr.png', { type: 'image/png' });
-
         if (navigator.share && navigator.canShare({ files: [file] })) {
           try {
-            await navigator.share({
-              title: 'Bus Trip Live Tracker',
-              text: `Join the live trip tracker: ${url}`,
-              files: [file]
-            });
-          } catch(e) {
-            // Fallback to download if share cancelled
-            downloadQr();
-          }
+            await navigator.share({ title: 'Bus Trip Live Tracker', text: `Join the live trip tracker: ${url}`, files: [file] });
+          } catch(e) { downloadQr(); }
         } else {
-          // Fallback — copy link to clipboard
-          navigator.clipboard.writeText(url).then(() => {
-            alert('Link copied to clipboard!\n\n' + url);
-          });
+          navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!\n\n' + url));
         }
       }, 'image/png');
     }, 200);
@@ -611,9 +761,9 @@
   // ── STOPS ─────────────────────────────────────────────────────────────
   function loadDefaultStops() {
     if (stops.length === 0) {
-      addStop('', '', false); // origin — name pulled from trip details
-      addStop('', '', true);  // middle stop
-      addStop('', '', false); // destination — name pulled from trip details
+      addStop('', '', false);
+      addStop('', '', true);
+      addStop('', '', false);
     }
   }
 
@@ -633,7 +783,6 @@
     const originVal = document.getElementById('tripOrigin').value.trim() || 'Origin';
     const destVal   = document.getElementById('tripDest').value.trim()   || 'Destination';
 
-    // Keep first/last stop names in sync with trip details
     if (stops.length > 0) stops[0].name = originVal;
     if (stops.length > 1) stops[stops.length - 1].name = destVal;
 
@@ -646,24 +795,43 @@
       row.className = 'stop-row';
 
       if (isLocked) {
-        // Origin and destination — display only, no editing
         row.innerHTML = `
           <div class="stop-num" style="background:${isOrigin ? 'var(--accent2)' : 'var(--accent)'}">${i + 1}</div>
           <div class="stop-inputs">
-            <input type="text" value="${stop.name}" disabled
-              style="opacity:0.6;cursor:not-allowed;flex:2" />
+            <input type="text" value="${stop.name}" disabled style="opacity:0.6;cursor:not-allowed;flex:2" />
             <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:140px" />
           </div>
         `;
       } else {
+        // Build address book dropdown HTML for this stop
+        const book = getAddressBook();
+        const addrVal = stop.address || '';
+        const filtered = addrVal
+          ? book.filter(a => a.toLowerCase().includes(addrVal.toLowerCase()))
+          : book;
+        const ddItems = filtered.length > 0
+          ? filtered.map(addr => `
+              <div class="addr-item">
+                <span class="addr-item-text" onmousedown="event.preventDefault(); stops[${i}].address='${addr.replace(/'/g,"\\'")}'; renderStops()">${addr}</span>
+                <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddr(${JSON.stringify(addr)}); renderStops()" title="Remove">✕</button>
+              </div>`).join('')
+          : `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
+
         row.innerHTML = `
           <div class="stop-num">${i + 1}</div>
-          <div class="stop-inputs">
+          <div class="stop-inputs" style="position:relative">
             <input type="text" placeholder="Stop name (e.g. McDonald's Topeka)" value="${stop.name}"
               oninput="stops[${i}].name = this.value" />
-            <input type="text" placeholder="Full address for ETA" value="${stop.address || ''}"
-              oninput="stops[${i}].address = this.value" />
+            <div style="position:relative;flex:1;min-width:100px">
+              <input type="text" placeholder="Full address for ETA" value="${addrVal}"
+                oninput="stops[${i}].address = this.value; renderStops()"
+                onfocus="this.nextElementSibling.nextElementSibling.classList.add('open')"
+                onblur="setTimeout(()=>this.nextElementSibling.nextElementSibling.classList.remove('open'),200)"
+                autocomplete="off" style="width:100%;padding-right:2rem" />
+              <button class="addr-save-btn" title="Save address" onmousedown="event.preventDefault(); stopAddrSave(${i}); this.textContent='✓'; setTimeout(()=>this.textContent='💾',1500)">💾</button>
+              <div class="addr-dropdown open" style="display:${filtered.length > 0 || book.length === 0 ? 'none' : 'none'}" id="stop-dd-${i}">${ddItems}</div>
+            </div>
             <input type="text" placeholder="Duration (e.g. 20 min)" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:120px" />
           </div>
@@ -713,7 +881,6 @@
       return;
     }
 
-    // Initialize stop statuses
     stopStatuses = stops.map((s, i) => ({
       ...s,
       status: i === 0 ? 'done' : 'upcoming'
@@ -722,7 +889,7 @@
     tripActive = true;
     updateStatusCard();
     startGpsPinger();
-    await doPing(); // immediate first ping
+    await doPing();
   }
 
   async function endTrip() {
@@ -730,8 +897,6 @@
     tripActive = false;
     stopGpsPinger();
     updateStatusCard();
-
-    // Mark trip inactive in Supabase
     await pushToSupabase({ status: 'inactive' });
     addLog('Trip ended', 'ok');
     document.getElementById('gpsDot').className = 'gps-dot';
@@ -742,7 +907,6 @@
   function startGpsPinger() {
     document.getElementById('gpsDot').className = 'gps-dot active';
     document.getElementById('gpsText').textContent = 'Getting GPS...';
-
     pingInterval = setInterval(doPing, getPingIntervalMs());
     startCountdown();
   }
@@ -780,18 +944,16 @@
 
       addLog(`Position: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'ok');
 
-      // Get ETA from Google if key available
       let etaData = {};
       if (getGoogleKey()) {
         etaData = await getETAFromGoogle(lat, lng);
       }
 
-      // Build full state object
-      const origin = document.getElementById('tripOrigin').value.trim();
-      const dest   = document.getElementById('tripDest').value.trim();
-      const name   = document.getElementById('tripName').value.trim();
-      const mapsUrl = document.getElementById('tripMapsUrl').value.trim();
-      const youtubeId = localStorage.getItem('youtubeId') || '';
+      const origin    = document.getElementById('tripOrigin').value.trim();
+      const dest      = document.getElementById('tripDest').value.trim();
+      const name      = document.getElementById('tripName').value.trim();
+      const mapsUrl   = document.getElementById('tripMapsUrl').value.trim();
+      const youtubeId = document.getElementById('cfgYoutubeId').value.trim() || localStorage.getItem('youtubeId') || '';
 
       const state = {
         status: 'active',
@@ -800,6 +962,7 @@
         destination: stops[stops.length - 1]?.name || dest,
         youtube_id: youtubeId,
         maps_url: mapsUrl,
+        trip_message: document.getElementById('tripMessage').value.trim() || null,
         access_pin: document.getElementById('tripPin').value.trim() || null,
         lat, lng,
         stops: stopStatuses,
@@ -808,17 +971,13 @@
       };
 
       await pushToSupabase(state);
-      startCountdown(); // reset countdown after successful ping
+      startCountdown();
 
     }, (err) => {
       document.getElementById('gpsDot').className = 'gps-dot error';
       document.getElementById('gpsText').textContent = 'GPS error — check permissions';
       addLog(`GPS error: ${err.message}`, 'err');
-    }, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
 
   // ── GOOGLE DIRECTIONS (via Cloudflare Worker proxy) ──────────────────
@@ -833,12 +992,10 @@
       return {};
     }
 
-    // Find next incomplete stop
     const nextStop = stopStatuses.find(s => s.status === 'upcoming' && s.address);
     let etaNextStop = '—';
 
     try {
-      // ETA to final destination — via proxy
       const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}`;
       const res  = await fetch(proxyUrl);
       const data = await res.json();
@@ -855,7 +1012,6 @@
       const distStr      = leg.distance.text;
       const distMeters   = leg.distance.value;
 
-      // ETA to next stop — via proxy
       if (nextStop?.address) {
         const proxyUrl2 = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&key=${encodeURIComponent(apiKey)}`;
         const res2  = await fetch(proxyUrl2);
@@ -889,7 +1045,6 @@
     if (!url || !key) { addLog('Supabase not configured', 'err'); return; }
 
     try {
-      // Upsert with fixed id=1 so there's always just one row
       const res = await fetch(`${url}/rest/v1/trip_state?on_conflict=id`, {
         method: 'POST',
         headers: {
@@ -917,7 +1072,7 @@
     const container = document.getElementById('stopButtons');
     container.innerHTML = '';
     stopStatuses.forEach((stop, i) => {
-      if (i === 0) return; // origin auto-marked done
+      if (i === 0) return;
       const btn = document.createElement('button');
       btn.className = `btn ${stop.status === 'done' ? 'btn-outline' : 'btn-green'}`;
       btn.style.marginBottom = '0.5rem';
@@ -934,14 +1089,11 @@
   async function markStopDone(idx) {
     stopStatuses[idx].status = 'done';
     stopStatuses[idx].departed = new Date().toISOString();
-
-    // Find next upcoming stop and mark active
     const nextIdx = stopStatuses.findIndex((s, i) => i > idx && s.status === 'upcoming');
     if (nextIdx !== -1) stopStatuses[nextIdx].status = 'active';
-
     renderStopButtons();
     addLog(`Marked departed: ${stopStatuses[idx].name || 'Stop ' + (idx+1)}`, 'ok');
-    await doPing(); // immediate ping after stop departure
+    await doPing();
   }
 
   // ── HELPERS ───────────────────────────────────────────────────────────
@@ -952,7 +1104,6 @@
     div.className = 'log-entry';
     div.innerHTML = `<span class="log-time">${time}</span><span class="${type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : ''}">${msg}</span>`;
     log.prepend(div);
-    // Keep last 30 entries
     while (log.children.length > 31) log.removeChild(log.lastChild);
   }
 
@@ -962,10 +1113,10 @@
     setTimeout(() => btn.textContent = orig, 2000);
   }
 
-  function getSupabaseUrl()  { return localStorage.getItem('supabaseUrl')  || document.getElementById('cfgSupabaseUrl').value.trim(); }
-  function getSupabaseKey()  { return localStorage.getItem('supabaseKey')  || document.getElementById('cfgSupabaseKey').value.trim(); }
-  function getGoogleKey()    { return localStorage.getItem('googleKey')    || document.getElementById('cfgGoogleKey').value.trim(); }
-  function getWorkerUrl()    { return localStorage.getItem('workerUrl')    || document.getElementById('cfgWorkerUrl').value.trim(); }
+  function getSupabaseUrl() { return localStorage.getItem('supabaseUrl') || document.getElementById('cfgSupabaseUrl').value.trim(); }
+  function getSupabaseKey() { return localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(); }
+  function getGoogleKey()   { return localStorage.getItem('googleKey')   || document.getElementById('cfgGoogleKey').value.trim(); }
+  function getWorkerUrl()   { return localStorage.getItem('workerUrl')   || document.getElementById('cfgWorkerUrl').value.trim(); }
 </script>
 </body>
 </html>
