@@ -369,10 +369,6 @@
           <label>Cloudflare Worker URL</label>
           <input type="text" id="cfgWorkerUrl" placeholder="https://bus-eta-proxy.yourname.workers.dev" />
         </div>
-        <div class="field">
-          <label>YouTube Live Video ID</label>
-          <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" />
-        </div>
         <div class="field full">
           <label>Your GitHub Pages URL (for QR codes)</label>
           <input type="text" id="cfgSiteUrl" placeholder="https://yourusername.github.io/bus" />
@@ -438,9 +434,15 @@
             <div class="addr-dropdown" id="dd-tripDest"></div>
           </div>
         </div>
-        <div class="field full">
-          <label>Google Maps Share Link (for passenger map)</label>
-          <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+        <div class="field-grid" style="margin-bottom:0">
+          <div class="field">
+            <label>Google Maps Share Link (for passenger map)</label>
+            <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+          </div>
+          <div class="field">
+            <label>YouTube Live Video ID</label>
+            <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" maxlength="12" style="max-width:160px" oninput="localStorage.setItem('youtubeId', this.value.trim())" />
+          </div>
         </div>
         <div class="field full">
           <label>Trip Message (shown to passengers on the tracker page)</label>
@@ -764,7 +766,6 @@
     localStorage.setItem('supabaseKey', document.getElementById('cfgSupabaseKey').value.trim());
     localStorage.setItem('googleKey',   document.getElementById('cfgGoogleKey').value.trim());
     localStorage.setItem('workerUrl',   document.getElementById('cfgWorkerUrl').value.trim());
-    localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
     localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
     localStorage.setItem('githubToken', document.getElementById('cfgGithubToken').value.trim());
     localStorage.setItem('githubRepo',  document.getElementById('cfgGithubRepo').value.trim());
@@ -1242,7 +1243,6 @@
       supabaseKey: localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(),
       googleKey:   localStorage.getItem('googleKey')   || document.getElementById('cfgGoogleKey').value.trim(),
       workerUrl:   localStorage.getItem('workerUrl')   || document.getElementById('cfgWorkerUrl').value.trim(),
-      youtubeId:   localStorage.getItem('youtubeId')   || document.getElementById('cfgYoutubeId').value.trim(),
       siteUrl:     localStorage.getItem('siteUrl')     || document.getElementById('cfgSiteUrl').value.trim(),
     };
 
@@ -1301,8 +1301,8 @@
       const encoded = atob(data.content.split('\n').join('')); // GitHub wraps base64 in newlines
       const config  = JSON.parse(atob(encoded));
 
-      const fields = ['supabaseUrl','supabaseKey','googleKey','workerUrl','youtubeId','siteUrl'];
-      const ids    = ['cfgSupabaseUrl','cfgSupabaseKey','cfgGoogleKey','cfgWorkerUrl','cfgYoutubeId','cfgSiteUrl'];
+      const fields = ['supabaseUrl','supabaseKey','googleKey','workerUrl','siteUrl'];
+      const ids    = ['cfgSupabaseUrl','cfgSupabaseKey','cfgGoogleKey','cfgWorkerUrl','cfgSiteUrl'];
       fields.forEach((key, i) => {
         if (config[key]) {
           localStorage.setItem(key, config[key]);
