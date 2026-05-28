@@ -533,6 +533,32 @@
   let nextPingAt = null;
   let stops = [];
   let stopStatuses = [];
+  let wakeLock = null;
+
+  // ── WAKE LOCK ─────────────────────────────────────────────────────────
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      addLog('Wake lock not supported on this device', 'info');
+      return;
+    }
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      addLog('Screen wake lock active — display will stay on', 'ok');
+      wakeLock.addEventListener('release', () => {
+        if (tripActive) setTimeout(requestWakeLock, 2000);
+      });
+    } catch(e) {
+      addLog(`Wake lock unavailable: ${e.message}`, 'info');
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+      addLog('Screen wake lock released', 'info');
+    }
+  }
 
   function getPingIntervalMs() {
     const mins = parseFloat(document.getElementById('pingFrequency').value) || 1.5;
@@ -888,6 +914,7 @@
 
     tripActive = true;
     updateStatusCard();
+    await requestWakeLock();
     startGpsPinger();
     await doPing();
   }
@@ -896,6 +923,7 @@
     if (!confirm('End the trip? This will clear the passenger view.')) return;
     tripActive = false;
     stopGpsPinger();
+    await releaseWakeLock();
     updateStatusCard();
     await pushToSupabase({ status: 'inactive' });
     addLog('Trip ended', 'ok');
@@ -1120,3 +1148,4 @@
 </script>
 </body>
 </html>
+
