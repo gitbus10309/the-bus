@@ -891,7 +891,7 @@
           <div class="stop-num" style="background:${isOrigin ? 'var(--accent2)' : 'var(--accent)'}">${i + 1}</div>
           <div class="stop-inputs">
             <input type="text" value="${stop.name}" disabled style="opacity:0.6;cursor:not-allowed;flex:2" />
-            <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
+            <input type="text" placeholder="Stop duration (e.g. 0:30)" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:140px" />
           </div>
         `;
@@ -910,7 +910,7 @@
               <button class="addr-save-btn" title="Save address" onmousedown="event.preventDefault(); stopAddrSave(${i}); this.textContent='✓'; setTimeout(()=>this.textContent='💾',1500)">💾</button>
               <div class="addr-dropdown" id="stop-dd-${i}"></div>
             </div>
-            <input type="text" placeholder="Duration (e.g. 20 min)" value="${stop.duration || ''}"
+            <input type="text" placeholder="Duration (e.g. 0:30)" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:120px" />
           </div>
           <button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>
@@ -1105,7 +1105,22 @@
 
       const leg          = data.routes[0].legs[0];
       const durationSecs = leg.duration_in_traffic?.value || leg.duration.value;
-      const arrivalTime  = new Date(Date.now() + durationSecs * 1000);
+
+      // Add planned stop durations for all remaining stops (not yet departed)
+      const stopDurationMins = stopStatuses
+        .filter(s => s.status !== 'done' && s.duration)
+        .reduce((total, s) => {
+          const parts = String(s.duration).trim().split(':');
+          if (parts.length === 2) {
+            const hrs  = parseInt(parts[0]) || 0;
+            const mins = parseInt(parts[1]) || 0;
+            return total + hrs * 60 + mins;
+          }
+          return total;
+        }, 0);
+
+      const totalSecs    = durationSecs + stopDurationMins * 60;
+      const arrivalTime  = new Date(Date.now() + totalSecs * 1000);
       const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const distStr      = leg.distance.text;
       const distMeters   = leg.distance.value;
