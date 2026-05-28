@@ -420,7 +420,7 @@
           <label>Origin (full address)</label>
           <div class="addr-wrap" id="wrap-tripOrigin">
             <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS"
-              oninput="renderStops(); onAddrInput('tripOrigin')"
+              oninput="onAddrInput('tripOrigin')" onchange="renderStops()"
               onfocus="openAddrDropdown('tripOrigin')"
               onblur="closeAddrDropdown('tripOrigin')" autocomplete="off" />
             <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripOrigin')">💾</button>
@@ -431,7 +431,7 @@
           <label>Destination (full address)</label>
           <div class="addr-wrap" id="wrap-tripDest">
             <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO"
-              oninput="renderStops(); onAddrInput('tripDest')"
+              oninput="onAddrInput('tripDest')" onchange="renderStops()"
               onfocus="openAddrDropdown('tripDest')"
               onblur="closeAddrDropdown('tripDest')" autocomplete="off" />
             <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripDest')">💾</button>
@@ -868,7 +868,7 @@
               oninput="stops[${i}].name = this.value" />
             <div style="position:relative;flex:1;min-width:100px">
               <input type="text" placeholder="Full address for ETA" value="${addrVal}"
-                oninput="stops[${i}].address = this.value; renderStops()"
+                oninput="stops[${i}].address = this.value"
                 onfocus="this.nextElementSibling.nextElementSibling.classList.add('open')"
                 onblur="setTimeout(()=>this.nextElementSibling.nextElementSibling.classList.remove('open'),200)"
                 autocomplete="off" style="width:100%;padding-right:2rem" />
