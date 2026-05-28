@@ -642,12 +642,26 @@
       return;
     }
 
-    dd.innerHTML = filtered.map(addr => `
-      <div class="addr-item">
-        <span class="addr-item-text" onmousedown="event.preventDefault(); pickAddr('${fieldId}', ${JSON.stringify(addr)})">${addr}</span>
-        <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddrAndRefresh('${fieldId}', ${JSON.stringify(addr)})" title="Remove">✕</button>
+    dd.innerHTML = filtered.map((addr, idx) => `
+      <div class="addr-item" data-addr="${addr.replace(/"/g,'&quot;')}" data-field="${fieldId}">
+        <span class="addr-item-text">${addr}</span>
+        <button class="addr-item-del" title="Remove">✕</button>
       </div>
     `).join('');
+
+    // Attach events after rendering to avoid inline quoting issues
+    dd.querySelectorAll('.addr-item').forEach(item => {
+      const addr = item.getAttribute('data-addr');
+      const fid  = item.getAttribute('data-field');
+      item.querySelector('.addr-item-text').addEventListener('mousedown', e => {
+        e.preventDefault();
+        pickAddr(fid, addr);
+      });
+      item.querySelector('.addr-item-del').addEventListener('mousedown', e => {
+        e.preventDefault();
+        deleteAddrAndRefresh(fid, addr);
+      });
+    });
   }
 
   function pickAddr(fieldId, val) {
