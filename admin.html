@@ -1246,8 +1246,7 @@
       }
 
       const data    = await res.json();
-      const encoded = atob(data.content.replace(/
-/g, '')); // GitHub wraps base64 in newlines
+      const encoded = atob(data.content.split('\n').join('')); // GitHub wraps base64 in newlines
       const config  = JSON.parse(atob(encoded));
 
       const fields = ['supabaseUrl','supabaseKey','googleKey','workerUrl','youtubeId','siteUrl'];
