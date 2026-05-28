@@ -77,8 +77,29 @@
       border-radius: 50%; animation: pulse 1.5s ease-in-out infinite;
     }
 
-    .last-ping {
-      font-size: 0.7rem; color: var(--muted); font-weight: 600;
+    .last-ping { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+
+    /* ── TRIP MESSAGE ── */
+    .trip-message {
+      background: var(--surface);
+      border: 2px solid #ffd4b0;
+      border-radius: var(--radius);
+      padding: 0.9rem 1.25rem;
+      box-shadow: var(--shadow);
+      animation: slideUp 0.4s 0.03s ease both;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .trip-message-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+    .trip-message-body {
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.65;
+      color: var(--text);
+      white-space: pre-wrap;
     }
 
     /* ── ETA BAR ── */
@@ -108,13 +129,9 @@
     .eta-value.highlight { color: var(--accent); }
     .eta-value.green { color: var(--accent2); }
 
-    .eta-divider {
-      width: 1px; height: 36px; background: var(--border); flex-shrink: 0;
-    }
+    .eta-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
 
-    .progress-wrap {
-      flex: 1; min-width: 180px;
-    }
+    .progress-wrap { flex: 1; min-width: 180px; }
 
     .progress-label {
       display: flex; justify-content: space-between;
@@ -122,81 +139,12 @@
       margin-bottom: 5px;
     }
 
-    .progress-track {
-      height: 8px; background: var(--border);
-      border-radius: 999px; overflow: hidden;
-    }
+    .progress-track { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
 
     .progress-fill {
       height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
-      border-radius: 999px;
-      transition: width 1s ease;
+      border-radius: 999px; transition: width 1s ease;
     }
-
-    /* ── MAIN PANELS ── */
-    .panels {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      flex: 1;
-      min-height: 0;
-    }
-
-    @media (max-width: 680px) {
-      .panels { grid-template-columns: 1fr; }
-      .page { min-height: auto; }
-    }
-
-    .panel {
-      background: var(--surface);
-      border: 2px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      display: flex; flex-direction: column;
-      animation: slideUp 0.5s ease both;
-      min-height: 280px;
-    }
-
-    .panel:nth-child(1) { animation-delay: 0.1s; }
-    .panel:nth-child(2) { animation-delay: 0.2s; }
-
-    .panel-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0.65rem 1rem;
-      background: var(--surface2);
-      border-bottom: 2px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .panel-icon {
-      font-size: 1rem; width: 28px; height: 28px;
-      background: white; border: 2px solid var(--border);
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    }
-
-    .panel-title { font-size: 0.85rem; font-weight: 800; }
-    .panel-sub { margin-left: auto; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
-
-    .panel-body {
-      flex: 1; min-height: 0; position: relative; background: #faf3ea;
-    }
-
-    .panel-body iframe {
-      position: absolute; inset: 0; width: 100%; height: 100%;
-      border: none; display: block;
-    }
-
-    .placeholder {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 0.5rem; text-align: center; padding: 1.5rem;
-    }
-
-    .placeholder .big { font-size: 2.2rem; }
-    .placeholder strong { font-size: 0.95rem; font-weight: 800; }
-    .placeholder span { font-size: 0.78rem; color: var(--muted); max-width: 200px; line-height: 1.5; font-weight: 600; }
 
     /* ── STOP TIMELINE ── */
     .stops-panel {
@@ -205,7 +153,7 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       overflow: hidden;
-      animation: slideUp 0.5s 0.3s ease both;
+      animation: slideUp 0.5s 0.1s ease both;
     }
 
     .stops-header {
@@ -230,7 +178,6 @@
       flex: 1; min-width: 80px; position: relative;
     }
 
-    /* connector line */
     .stop-item:not(:last-child)::after {
       content: '';
       position: absolute;
@@ -263,20 +210,78 @@
 
     .stop-name {
       font-size: 0.68rem; font-weight: 800; text-align: center;
-      margin-top: 6px; color: var(--muted); max-width: 70px;
-      line-height: 1.3;
+      margin-top: 6px; color: var(--muted); max-width: 70px; line-height: 1.3;
     }
 
     .stop-item.done .stop-name { color: var(--accent2); }
     .stop-item.active .stop-name { color: var(--accent); }
 
-    .stop-eta {
-      font-size: 0.63rem; font-weight: 700; color: var(--muted);
-      text-align: center; margin-top: 2px;
-    }
-
+    .stop-eta { font-size: 0.63rem; font-weight: 700; color: var(--muted); text-align: center; margin-top: 2px; }
     .stop-item.done .stop-eta { color: var(--accent2); }
     .stop-item.active .stop-eta { color: var(--accent); }
+
+    /* ── MAIN PANELS ── */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 680px) {
+      .panels { grid-template-columns: 1fr; }
+      .page { min-height: auto; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+      animation: slideUp 0.5s ease both;
+      min-height: 280px;
+    }
+
+    .panel:nth-child(1) { animation-delay: 0.2s; }
+    .panel:nth-child(2) { animation-delay: 0.3s; }
+
+    .panel-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.65rem 1rem;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-icon {
+      font-size: 1rem; width: 28px; height: 28px;
+      background: white; border: 2px solid var(--border);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .panel-title { font-size: 0.85rem; font-weight: 800; }
+    .panel-sub { margin-left: auto; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+
+    .panel-body { flex: 1; min-height: 0; position: relative; background: #faf3ea; }
+
+    .panel-body iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border: none; display: block;
+    }
+
+    .placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.5rem; text-align: center; padding: 1.5rem;
+    }
+
+    .placeholder .big { font-size: 2.2rem; }
+    .placeholder strong { font-size: 0.95rem; font-weight: 800; }
+    .placeholder span { font-size: 0.78rem; color: var(--muted); max-width: 200px; line-height: 1.5; font-weight: 600; }
 
     /* ── PIN OVERLAY ── */
     .pin-overlay {
@@ -313,10 +318,7 @@
       margin-bottom: 0.75rem;
     }
 
-    .pin-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(247,127,42,0.12);
-    }
+    .pin-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(247,127,42,0.12); }
 
     .pin-input.error {
       border-color: #e05252;
@@ -336,10 +338,7 @@
     .pin-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(247,127,42,0.4); }
     .pin-submit:active { transform: scale(0.97); }
 
-    .pin-error-msg {
-      font-size: 0.78rem; color: #e05252; font-weight: 800;
-      margin-top: 0.6rem; min-height: 1.2em;
-    }
+    .pin-error-msg { font-size: 0.78rem; color: #e05252; font-weight: 800; margin-top: 0.6rem; min-height: 1.2em; }
 
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
@@ -358,16 +357,6 @@
     .no-trip .big { font-size: 3rem; }
     .no-trip strong { font-size: 1.1rem; font-weight: 900; }
     .no-trip p { font-size: 0.85rem; color: var(--muted); font-weight: 600; max-width: 300px; line-height: 1.6; }
-
-    .open-map-btn {
-      display: inline-block;
-      background: var(--accent2); color: white;
-      padding: 0.55rem 1.25rem; border-radius: 10px;
-      font-family: 'Nunito', sans-serif; font-weight: 900;
-      font-size: 0.85rem; text-decoration: none;
-      box-shadow: 0 4px 12px rgba(76,175,138,0.35);
-      margin-top: 0.25rem;
-    }
 
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(18px); }
@@ -409,6 +398,7 @@
 
 <div class="page">
 
+  <!-- Header -->
   <header>
     <span class="bus-emoji">🚌</span>
     <div class="header-text">
@@ -420,6 +410,12 @@
       <div class="live-pill"><div class="live-dot"></div> Live</div>
     </div>
   </header>
+
+  <!-- Trip Message (shown when trip_message is set in Supabase) -->
+  <div class="trip-message" id="tripMessage" style="display:none">
+    <span class="trip-message-icon">📋</span>
+    <div class="trip-message-body" id="tripMessageText"></div>
+  </div>
 
   <!-- ETA Bar -->
   <div class="eta-bar" id="etaBar" style="display:none">
@@ -449,23 +445,17 @@
     </div>
   </div>
 
-  <!-- Camera + Map -->
-  <div class="panels">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-icon">📷</div>
-        <span class="panel-title">Live Camera</span>
-        <span class="panel-sub">~15–30 sec delay</span>
-      </div>
-      <div class="panel-body" id="videoPanel">
-        <div class="placeholder">
-          <div class="big">📡</div>
-          <strong>No active trip</strong>
-          <span>Camera feed will appear here when a trip is in progress</span>
-        </div>
-      </div>
+  <!-- Stop Timeline -->
+  <div class="stops-panel" id="stopsPanel" style="display:none">
+    <div class="stops-header">
+      <div class="panel-icon" style="width:28px;height:28px;font-size:1rem">🛣️</div>
+      <span class="stops-title">Trip Progress</span>
     </div>
+    <div class="stops-list" id="stopsList"></div>
+  </div>
 
+  <!-- Map + Camera (map first on mobile) -->
+  <div class="panels">
     <div class="panel">
       <div class="panel-header">
         <div class="panel-icon">📍</div>
@@ -481,15 +471,21 @@
         <div id="busMap" style="position:absolute;inset:0;width:100%;height:100%;display:none"></div>
       </div>
     </div>
-  </div>
 
-  <!-- Stop Timeline -->
-  <div class="stops-panel" id="stopsPanel" style="display:none">
-    <div class="stops-header">
-      <div class="panel-icon" style="width:28px;height:28px;font-size:1rem">🛣️</div>
-      <span class="stops-title">Trip Progress</span>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon">📷</div>
+        <span class="panel-title">Live Camera</span>
+        <span class="panel-sub">~15–30 sec delay</span>
+      </div>
+      <div class="panel-body" id="videoPanel">
+        <div class="placeholder">
+          <div class="big">📡</div>
+          <strong>No active trip</strong>
+          <span>Camera feed will appear here when a trip is in progress</span>
+        </div>
+      </div>
     </div>
-    <div class="stops-list" id="stopsList"></div>
   </div>
 
   <!-- No trip state -->
@@ -502,21 +498,14 @@
 </div>
 
 <script>
-  // ── CONFIG — fill these in ──────────────────────────────────────────
-  const SUPABASE_URL = 'https://xumvkilemhtglrvueqtu.supabase.co';
+  const SUPABASE_URL     = 'https://xumvkilemhtglrvueqtu.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_WNs4wTiZ8tPGSKySXO2M8Q_HT8dkArv';
-  // ────────────────────────────────────────────────────────────────────
+  const REFRESH_MS = 30000;
 
-  const REFRESH_MS = 30000; // poll Supabase every 30 seconds
-
-  // ── PIN GATE ──────────────────────────────────────────────────────────
-  let tripPin    = null;
+  let tripPin     = null;
   let pinUnlocked = false;
+  const urlPin    = new URLSearchParams(window.location.search).get('pin');
 
-  // Check if PIN passed in URL e.g. ?pin=1234 (used by QR code)
-  const urlPin = new URLSearchParams(window.location.search).get('pin');
-
-  // Restore session unlock so page refresh doesn't re-prompt
   if (sessionStorage.getItem('pinUnlocked') === '1') pinUnlocked = true;
 
   function showPinOverlay() {
@@ -544,14 +533,10 @@
     }
   }
 
-
   async function fetchTripState() {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/trip_state?select=*&order=updated_at.desc&limit=1`, {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
       });
       const data = await res.json();
       return data && data.length > 0 ? data[0] : null;
@@ -579,18 +564,18 @@
       document.getElementById('noTrip').style.display = 'flex';
       document.getElementById('etaBar').style.display = 'none';
       document.getElementById('stopsPanel').style.display = 'none';
+      document.getElementById('tripMessage').style.display = 'none';
       return;
     }
 
-    // ── PIN CHECK ──
+    // PIN check
     tripPin = state.access_pin || null;
     if (tripPin && !pinUnlocked) {
-      // Check URL pin first (from QR code)
       if (urlPin && urlPin === String(tripPin)) {
         hidePinOverlay();
       } else {
         showPinOverlay();
-        return; // don't render trip content until unlocked
+        return;
       }
     }
 
@@ -607,33 +592,46 @@
       document.getElementById('tripSubtitle').textContent = `En route to ${state.destination}`;
     }
 
-    // Last ping
     if (state.updated_at) {
       document.getElementById('lastPing').textContent = `Last update: ${timeSince(state.updated_at)}`;
     }
 
-    // ETA values (calculated on bus, stored in Supabase)
+    // Trip message
+    const msgEl   = document.getElementById('tripMessage');
+    const msgText = document.getElementById('tripMessageText');
+    if (state.trip_message && state.trip_message.trim()) {
+      msgText.textContent = state.trip_message.trim();
+      msgEl.style.display = 'flex';
+    } else {
+      msgEl.style.display = 'none';
+    }
+
+    // ETA
     document.getElementById('etaDestination').textContent = state.eta_destination || '—';
-    document.getElementById('etaNextStop').textContent = state.eta_next_stop || '—';
-    document.getElementById('distanceLeft').textContent = state.distance_remaining || '—';
+    document.getElementById('etaNextStop').textContent    = state.eta_next_stop    || '—';
+    document.getElementById('distanceLeft').textContent   = state.distance_remaining || '—';
 
     // Progress bar
     const pct = state.progress_pct || 0;
     document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('progressFrom').textContent = state.origin || 'Origin';
-    document.getElementById('progressTo').textContent = state.destination || 'Destination';
+    document.getElementById('progressFrom').textContent  = state.origin      || 'Origin';
+    document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
-    // YouTube feed
+    // YouTube feed — always update if video ID changes
     if (state.youtube_id) {
-      const vp = document.getElementById('videoPanel');
-      if (!vp.querySelector('iframe')) {
-        vp.innerHTML = `<iframe src="https://www.youtube.com/embed/${state.youtube_id}?autoplay=1&rel=0"
-          frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      const vp       = document.getElementById('videoPanel');
+      const existing = vp.querySelector('iframe');
+      const newSrc   = `https://www.youtube.com/embed/${state.youtube_id}?autoplay=1&rel=0`;
+      if (!existing) {
+        vp.innerHTML = `<iframe src="${newSrc}" frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen></iframe>`;
+      } else if (!existing.src.includes(state.youtube_id)) {
+        existing.src = newSrc;
       }
     }
 
-    // Map — embedded Google Maps with bus marker
+    // Map
     if (state.lat && state.lng) {
       const pos = { lat: parseFloat(state.lat), lng: parseFloat(state.lng) };
       document.getElementById('mapPlaceholder').style.display = 'none';
@@ -641,7 +639,6 @@
       document.getElementById('mapLastUpdate').textContent = `Updated: ${timeSince(state.updated_at)}`;
 
       if (!window.busMap) {
-        // Map not initialized yet — wait for initMap callback
         window.pendingBusPos = pos;
       } else {
         updateBusMarker(pos);
@@ -652,7 +649,7 @@
     if (state.stops && Array.isArray(state.stops)) {
       const list = document.getElementById('stopsList');
       list.innerHTML = '';
-      state.stops.forEach((stop, i) => {
+      state.stops.forEach((stop) => {
         const div = document.createElement('div');
         div.className = `stop-item ${stop.status || ''}`;
         div.innerHTML = `
@@ -670,21 +667,18 @@
     renderTrip(state);
   }
 
-  // ── GOOGLE MAPS ───────────────────────────────────────────────────────
+  // Google Maps
   window.initMap = function() {
-    // Default center — middle of US, will move to bus on first ping
     window.busMap = new google.maps.Map(document.getElementById('busMap'), {
       zoom: 10,
       center: { lat: 38.5, lng: -98.0 },
       mapTypeId: 'roadmap',
-      disableDefaultUI: false,
       zoomControl: true,
       streetViewControl: false,
       fullscreenControl: true,
       mapTypeControl: false,
     });
 
-    // Custom bus marker
     window.busMarker = new google.maps.Marker({
       map: window.busMap,
       title: 'Bus Location',
@@ -699,7 +693,6 @@
       }
     });
 
-    // If we already have a position waiting, use it
     if (window.pendingBusPos) {
       updateBusMarker(window.pendingBusPos);
       window.pendingBusPos = null;
