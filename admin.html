@@ -434,19 +434,19 @@
             <div class="addr-dropdown" id="dd-tripDest"></div>
           </div>
         </div>
-        <div class="field-grid" style="margin-bottom:0">
-          <div class="field">
+        <div class="field full" style="display:flex;gap:0.7rem;align-items:flex-end">
+          <div class="field" style="flex:1">
             <label>Google Maps Share Link (for passenger map)</label>
             <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
           </div>
-          <div class="field">
+          <div class="field" style="flex-shrink:0;width:160px">
             <label>YouTube Live Video ID</label>
-            <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" maxlength="12" style="max-width:160px" oninput="localStorage.setItem('youtubeId', this.value.trim())" />
+            <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" maxlength="12" oninput="localStorage.setItem('youtubeId', this.value.trim())" style="text-align:right" />
           </div>
         </div>
         <div class="field full">
           <label>Trip Message (shown to passengers on the tracker page)</label>
-          <textarea id="tripMessage" rows="4" placeholder="e.g. Welcome aboard! Departure is at 10:00am. Stops: Topeka (approx 11:30am), KC arrival approx 1:00pm. Questions? Text 316-555-0000."
+          <textarea id="tripMessage" rows="4" placeholder=""
             style="background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:0.55rem 0.85rem;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600;color:var(--text);outline:none;width:100%;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;line-height:1.6"></textarea>
         </div>
         <div class="field">
@@ -476,6 +476,24 @@
 
       <div class="keys-note" style="margin-top:0.75rem">
         Set a new 4-digit PIN for each charter. Passengers scan the QR code and go straight in — no typing needed. Change the PIN after each trip to lock out previous passengers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Trips -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">💾</div>
+      <span class="card-title">Saved Trips</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
+        <button class="btn btn-green" onclick="saveTrip()">💾 Save Current Trip</button>
+        <button class="btn btn-outline" onclick="deleteSavedTrip()" id="deleteTripBtn" style="display:none">🗑 Delete</button>
+      </div>
+      <div id="savedTripsList" style="display:flex;flex-direction:column;gap:0.4rem"></div>
+      <div class="keys-note" style="margin-top:0.75rem">
+        Save trip details to quickly reload for repeat charters. Stops, origin, destination, and message are all saved. PIN and YouTube ID are not saved — enter those fresh each trip.
       </div>
     </div>
   </div>
@@ -729,6 +747,107 @@
     }
   }
 
+  // ── SAVED TRIPS ──────────────────────────────────────────────────────
+  function getSavedTrips() {
+    try { return JSON.parse(localStorage.getItem('savedTrips') || '[]'); } catch { return []; }
+  }
+
+  function saveTrip() {
+    const name = document.getElementById('tripName').value.trim();
+    if (!name) { alert('Enter a Trip Name before saving.'); return; }
+
+    const trip = {
+      id: Date.now(),
+      tripName:    name,
+      origin:      document.getElementById('tripOrigin').value.trim(),
+      destination: document.getElementById('tripDest').value.trim(),
+      mapsUrl:     document.getElementById('tripMapsUrl').value.trim(),
+      tripMessage: document.getElementById('tripMessage').value.trim(),
+      stops:       stops.map(s => ({ ...s })),
+    };
+
+    const saved = getSavedTrips();
+    // Replace if same name exists, otherwise add
+    const idx = saved.findIndex(t => t.tripName === name);
+    if (idx >= 0) {
+      if (!confirm(`Overwrite saved trip "${name}"?`)) return;
+      saved[idx] = trip;
+    } else {
+      saved.unshift(trip);
+      if (saved.length > 20) saved.pop();
+    }
+
+    localStorage.setItem('savedTrips', JSON.stringify(saved));
+    renderSavedTrips();
+    addLog('Trip saved: ' + name, 'ok');
+  }
+
+  function loadTrip(id) {
+    const saved = getSavedTrips();
+    const trip  = saved.find(t => t.id === id);
+    if (!trip) return;
+
+    document.getElementById('tripName').value    = trip.tripName    || '';
+    document.getElementById('tripOrigin').value  = trip.origin      || '';
+    document.getElementById('tripDest').value    = trip.destination || '';
+    document.getElementById('tripMapsUrl').value = trip.mapsUrl     || '';
+    document.getElementById('tripMessage').value = trip.tripMessage || '';
+
+    if (trip.stops && trip.stops.length > 0) {
+      stops = trip.stops.map(s => ({ ...s, status: 'upcoming' }));
+    }
+    renderStops();
+    addLog('Trip loaded: ' + trip.tripName, 'ok');
+  }
+
+  function deleteSavedTrip() {
+    const active = document.querySelector('#savedTripsList .saved-trip-row.active-trip');
+    if (!active) return;
+    const id = parseInt(active.getAttribute('data-id'));
+    const saved = getSavedTrips().filter(t => t.id !== id);
+    localStorage.setItem('savedTrips', JSON.stringify(saved));
+    renderSavedTrips();
+    addLog('Saved trip deleted', 'ok');
+  }
+
+  function renderSavedTrips() {
+    const list   = document.getElementById('savedTripsList');
+    const delBtn = document.getElementById('deleteTripBtn');
+    const saved  = getSavedTrips();
+
+    if (saved.length === 0) {
+      list.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);font-weight:600">No saved trips yet.</div>';
+      delBtn.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = saved.map(t => `
+      <div class="saved-trip-row" data-id="${t.id}"
+        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;
+               background:var(--bg);border:2px solid var(--border);border-radius:10px;
+               cursor:pointer;transition:border-color 0.2s"
+        onclick="selectSavedTrip(${t.id})">
+        <span style="font-size:0.82rem;font-weight:800;flex:1">${t.tripName}</span>
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600">${t.origin ? t.origin.split(',')[0] : ''} → ${t.destination ? t.destination.split(',')[0] : ''}</span>
+      </div>
+    `).join('');
+  }
+
+  function selectSavedTrip(id) {
+    // Highlight selected
+    document.querySelectorAll('.saved-trip-row').forEach(r => {
+      r.classList.remove('active-trip');
+      r.style.borderColor = 'var(--border)';
+    });
+    const row = document.querySelector(`.saved-trip-row[data-id="${id}"]`);
+    if (row) {
+      row.classList.add('active-trip');
+      row.style.borderColor = 'var(--accent)';
+    }
+    document.getElementById('deleteTripBtn').style.display = 'inline-flex';
+    loadTrip(id);
+  }
+
   // ── PING FREQUENCY PERSISTENCE ────────────────────────────────────────
   function savePingFrequency() {
     localStorage.setItem('pingFrequency', document.getElementById('pingFrequency').value);
@@ -757,6 +876,7 @@
     document.getElementById('cfgGithubRepo').value   = localStorage.getItem('githubRepo')   || '';
     loadPingFrequency();
     loadDefaultStops();
+    renderSavedTrips();
     updateStatusCard();
     setTimeout(updateQrCode, 200);
   });
@@ -891,8 +1011,6 @@
           <div class="stop-num" style="background:${isOrigin ? 'var(--accent2)' : 'var(--accent)'}">${i + 1}</div>
           <div class="stop-inputs">
             <input type="text" value="${stop.name}" disabled style="opacity:0.6;cursor:not-allowed;flex:2" />
-            <input type="text" placeholder="Stop duration (e.g. 0:30)" value="${stop.duration || ''}"
-              oninput="stops[${i}].duration = this.value" style="max-width:140px" />
           </div>
         `;
       } else {
@@ -910,7 +1028,7 @@
               <button class="addr-save-btn" title="Save address" onmousedown="event.preventDefault(); stopAddrSave(${i}); this.textContent='✓'; setTimeout(()=>this.textContent='💾',1500)">💾</button>
               <div class="addr-dropdown" id="stop-dd-${i}"></div>
             </div>
-            <input type="text" placeholder="Duration (e.g. 0:30)" value="${stop.duration || ''}"
+            <input type="text" placeholder="HH:MM" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:120px" />
           </div>
           <button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>
