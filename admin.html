@@ -653,7 +653,8 @@
   function pickAddr(fieldId, val) {
     document.getElementById(fieldId).value = val;
     document.getElementById(`dd-${fieldId}`).classList.remove('open');
-    if (fieldId === 'tripOrigin' || fieldId === 'tripDest') renderStops();
+    // Use setTimeout so the field value is set before renderStops rebuilds the DOM
+    if (fieldId === 'tripOrigin' || fieldId === 'tripDest') setTimeout(renderStops, 50);
   }
 
   function deleteAddrAndRefresh(fieldId, val) {
@@ -856,7 +857,7 @@
         const ddItems = filtered.length > 0
           ? filtered.map(addr => `
               <div class="addr-item">
-                <span class="addr-item-text" onmousedown="event.preventDefault(); stops[${i}].address='${addr.replace(/'/g,"\\'")}'; renderStops()">${addr}</span>
+                <span class="addr-item-text" onmousedown="event.preventDefault(); stops[${i}].address='${addr.replace(/'/g,"\\'")}'; setTimeout(renderStops,50)">${addr}</span>
                 <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddr(${JSON.stringify(addr)}); renderStops()" title="Remove">✕</button>
               </div>`).join('')
           : `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
