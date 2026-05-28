@@ -377,6 +377,14 @@
           <label>Your GitHub Pages URL (for QR codes)</label>
           <input type="text" id="cfgSiteUrl" placeholder="https://yourusername.github.io/bus" />
         </div>
+        <div class="field">
+          <label>GitHub Personal Access Token</label>
+          <input type="password" id="cfgGithubToken" placeholder="ghp_..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Config Repo (user/repo)</label>
+          <input type="text" id="cfgGithubRepo" placeholder="gitbus10309/bus-config" />
+        </div>
       </div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
         <button class="btn btn-outline" onclick="saveKeys()">Save Keys</button>
@@ -384,19 +392,6 @@
         <button class="btn btn-outline" onclick="importConfig()">⬇ Import Config</button>
       </div>
 
-      <!-- Import overlay -->
-      <div id="importOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center">
-        <div style="background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:1.5rem;max-width:420px;width:90%;box-shadow:var(--shadow)">
-          <div style="font-size:0.85rem;font-weight:800;margin-bottom:0.75rem">⬇ Import Config</div>
-          <p style="font-size:0.78rem;color:var(--muted);font-weight:600;margin-bottom:0.75rem;line-height:1.5">Paste the exported config string from another device:</p>
-          <textarea id="importInput" rows="4" style="width:100%;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:0.55rem 0.85rem;font-family:monospace;font-size:0.8rem;color:var(--text);outline:none;resize:vertical;margin-bottom:0.75rem" placeholder="Paste config string here..."></textarea>
-          <div style="display:flex;gap:0.5rem;justify-content:flex-end">
-            <button class="btn btn-outline" onclick="document.getElementById('importOverlay').style.display='none'">Cancel</button>
-            <button class="btn btn-primary" onclick="doImport()">Load Config</button>
-          </div>
-          <div id="importError" style="font-size:0.75rem;color:var(--danger);font-weight:700;margin-top:0.5rem;min-height:1em"></div>
-        </div>
-      </div>
       <div class="keys-note" style="margin-top:0.75rem">
         Keys are saved locally on this device only — never shared with passengers.
         Get a free Supabase project at <a href="https://supabase.com" target="_blank">supabase.com</a>.
@@ -708,6 +703,8 @@
     document.getElementById('cfgWorkerUrl').value   = localStorage.getItem('workerUrl')   || '';
     document.getElementById('cfgYoutubeId').value   = localStorage.getItem('youtubeId')   || '';
     document.getElementById('cfgSiteUrl').value     = localStorage.getItem('siteUrl')     || '';
+    document.getElementById('cfgGithubToken').value  = localStorage.getItem('githubToken')  || '';
+    document.getElementById('cfgGithubRepo').value   = localStorage.getItem('githubRepo')   || '';
     loadPingFrequency();
     loadDefaultStops();
     updateStatusCard();
@@ -721,6 +718,8 @@
     localStorage.setItem('workerUrl',   document.getElementById('cfgWorkerUrl').value.trim());
     localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
     localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
+    localStorage.setItem('githubToken', document.getElementById('cfgGithubToken').value.trim());
+    localStorage.setItem('githubRepo',  document.getElementById('cfgGithubRepo').value.trim());
     flashBtn(event.target, '✓ Saved!');
     updateQrCode();
   }
@@ -1159,8 +1158,33 @@
     setTimeout(() => btn.textContent = orig, 2000);
   }
 
-  // ── CONFIG EXPORT / IMPORT ───────────────────────────────────────────
-  function exportConfig() {
+  // ── CONFIG EXPORT / IMPORT via GitHub ───────────────────────────────
+  function getGithubToken() { return localStorage.getItem('githubToken') || document.getElementById('cfgGithubToken').value.trim(); }
+  function getGithubRepo()  { return localStorage.getItem('githubRepo')  || document.getElementById('cfgGithubRepo').value.trim(); }
+  const GITHUB_CONFIG_FILE = 'config.txt';
+
+  async function getGithubFileSha() {
+    // Get current SHA of config.txt (needed for update calls)
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (res.status === 404) return null; // file doesn't exist yet
+      const data = await res.json();
+      return data.sha || null;
+    } catch { return null; }
+  }
+
+  async function exportConfig() {
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    if (!token || !repo) {
+      addLog('Export failed — GitHub Token and Config Repo must be saved in API Keys first', 'err');
+      return;
+    }
+
     const config = {
       supabaseUrl: localStorage.getItem('supabaseUrl') || document.getElementById('cfgSupabaseUrl').value.trim(),
       supabaseKey: localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(),
@@ -1169,23 +1193,63 @@
       youtubeId:   localStorage.getItem('youtubeId')   || document.getElementById('cfgYoutubeId').value.trim(),
       siteUrl:     localStorage.getItem('siteUrl')     || document.getElementById('cfgSiteUrl').value.trim(),
     };
+
     const encoded = btoa(JSON.stringify(config));
-    // Show in a prompt so user can copy easily
-    prompt('Copy this config string and paste it on your other device using Import Config:', encoded);
-  }
+    const sha     = await getGithubFileSha();
 
-  function importConfig() {
-    document.getElementById('importInput').value = '';
-    document.getElementById('importError').textContent = '';
-    document.getElementById('importOverlay').style.display = 'flex';
-    setTimeout(() => document.getElementById('importInput').focus(), 100);
-  }
+    const body = {
+      message: 'Update GitBus config',
+      content: btoa(encoded), // GitHub API requires base64 of file content
+    };
+    if (sha) body.sha = sha; // required for updates, omit for new file
 
-  function doImport() {
-    const raw = document.getElementById('importInput').value.trim();
-    if (!raw) { document.getElementById('importError').textContent = 'Please paste a config string first.'; return; }
     try {
-      const config = JSON.parse(atob(raw));
+      addLog('Exporting config to GitHub...', 'info');
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        addLog('Config exported to GitHub ✓', 'ok');
+      } else {
+        const err = await res.json();
+        addLog(`GitHub export failed: ${err.message}`, 'err');
+      }
+    } catch(e) {
+      addLog(`GitHub export error: ${e.message}`, 'err');
+    }
+  }
+
+  async function importConfig() {
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    if (!token || !repo) {
+      addLog('Import failed — GitHub Token and Config Repo must be saved in API Keys first', 'err');
+      return;
+    }
+
+    try {
+      addLog('Importing config from GitHub...', 'info');
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+
+      if (res.status === 404) {
+        addLog('No config found in GitHub repo — export from another device first', 'err');
+        return;
+      }
+
+      const data    = await res.json();
+      const encoded = atob(data.content.replace(/
+/g, '')); // GitHub wraps base64 in newlines
+      const config  = JSON.parse(atob(encoded));
+
       const fields = ['supabaseUrl','supabaseKey','googleKey','workerUrl','youtubeId','siteUrl'];
       const ids    = ['cfgSupabaseUrl','cfgSupabaseKey','cfgGoogleKey','cfgWorkerUrl','cfgYoutubeId','cfgSiteUrl'];
       fields.forEach((key, i) => {
@@ -1194,13 +1258,15 @@
           document.getElementById(ids[i]).value = config[key];
         }
       });
-      document.getElementById('importOverlay').style.display = 'none';
+
       updateQrCode();
-      addLog('Config imported successfully ✓', 'ok');
+      addLog('Config imported from GitHub ✓ — tap Save Keys to confirm', 'ok');
     } catch(e) {
-      document.getElementById('importError').textContent = 'Invalid config string — make sure you copied it fully.';
+      addLog(`GitHub import error: ${e.message}`, 'err');
     }
   }
+
+  function doImport() {} // no longer used — kept to avoid any reference errors
 
   function getSupabaseUrl() { return localStorage.getItem('supabaseUrl') || document.getElementById('cfgSupabaseUrl').value.trim(); }
   function getSupabaseKey() { return localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(); }
