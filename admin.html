@@ -677,6 +677,39 @@
   }
 
   // Stop address book helper — used inline in renderStops
+  function renderStopAddrDropdown(idx, dd, filter) {
+    const book = getAddressBook();
+    const filtered = filter
+      ? book.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+      : book;
+
+    if (filtered.length === 0) {
+      dd.innerHTML = `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
+      return;
+    }
+
+    dd.innerHTML = filtered.map(addr => `
+      <div class="addr-item" data-addr="${addr.replace(/"/g,'&quot;')}">
+        <span class="addr-item-text">${addr}</span>
+        <button class="addr-item-del" title="Remove">✕</button>
+      </div>
+    `).join('');
+
+    dd.querySelectorAll('.addr-item').forEach(item => {
+      const addr = item.getAttribute('data-addr');
+      item.querySelector('.addr-item-text').addEventListener('mousedown', e => {
+        e.preventDefault();
+        stops[idx].address = addr;
+        setTimeout(renderStops, 50);
+      });
+      item.querySelector('.addr-item-del').addEventListener('mousedown', e => {
+        e.preventDefault();
+        deleteAddr(addr);
+        renderStopAddrDropdown(idx, dd, stops[idx].address || '');
+      });
+    });
+  }
+
   function stopAddrPick(idx, val) {
     stops[idx].address = val;
     // Close any open dropdowns by re-rendering
@@ -862,19 +895,7 @@
           </div>
         `;
       } else {
-        // Build address book dropdown HTML for this stop
-        const book = getAddressBook();
         const addrVal = stop.address || '';
-        const filtered = addrVal
-          ? book.filter(a => a.toLowerCase().includes(addrVal.toLowerCase()))
-          : book;
-        const ddItems = filtered.length > 0
-          ? filtered.map(addr => `
-              <div class="addr-item">
-                <span class="addr-item-text" onmousedown="event.preventDefault(); stops[${i}].address='${addr.replace(/'/g,"\\'")}'; setTimeout(renderStops,50)">${addr}</span>
-                <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddr(${JSON.stringify(addr)}); renderStops()" title="Remove">✕</button>
-              </div>`).join('')
-          : `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
 
         row.innerHTML = `
           <div class="stop-num">${i + 1}</div>
@@ -884,17 +905,33 @@
             <div style="position:relative;flex:1;min-width:100px">
               <input type="text" placeholder="Full address for ETA" value="${addrVal}"
                 oninput="stops[${i}].address = this.value"
-                onfocus="this.nextElementSibling.nextElementSibling.classList.add('open')"
-                onblur="setTimeout(()=>this.nextElementSibling.nextElementSibling.classList.remove('open'),200)"
                 autocomplete="off" style="width:100%;padding-right:2rem" />
               <button class="addr-save-btn" title="Save address" onmousedown="event.preventDefault(); stopAddrSave(${i}); this.textContent='✓'; setTimeout(()=>this.textContent='💾',1500)">💾</button>
-              <div class="addr-dropdown open" style="display:${filtered.length > 0 || book.length === 0 ? 'none' : 'none'}" id="stop-dd-${i}">${ddItems}</div>
+              <div class="addr-dropdown" id="stop-dd-${i}"></div>
             </div>
             <input type="text" placeholder="Duration (e.g. 20 min)" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:120px" />
           </div>
           <button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>
         `;
+
+        // Wire up stop address dropdown with event listeners after render
+        const addrInput = row.querySelector('input[placeholder="Full address for ETA"]');
+        const stopDd    = row.querySelector('.addr-dropdown');
+        const stopIdx   = i;
+
+        addrInput.addEventListener('focus', () => {
+          renderStopAddrDropdown(stopIdx, stopDd, addrInput.value);
+          stopDd.classList.add('open');
+        });
+        addrInput.addEventListener('input', () => {
+          stops[stopIdx].address = addrInput.value;
+          renderStopAddrDropdown(stopIdx, stopDd, addrInput.value);
+          stopDd.classList.add('open');
+        });
+        addrInput.addEventListener('blur', () => {
+          setTimeout(() => stopDd.classList.remove('open'), 200);
+        });
       }
       list.appendChild(row);
     });
