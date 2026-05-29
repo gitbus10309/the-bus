@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GitBus — Live Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b24;
+      --border:  #2a3244;
+      --accent:  #f77f2a;
+      --green:   #4caf8a;
+      --text:    #e8ddd0;
+      --muted:   #6b7a94;
+      --label:   #8899b8;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+    }
+
+    /* ── STANDBY ── */
+    #standby {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      gap: 1.5rem;
+      z-index: 10;
+    }
+
+    #standby .bus-icon {
+      font-size: 5rem;
+      animation: drift 3s ease-in-out infinite;
+    }
+
+    #standby .standby-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    #standby .standby-dots span {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin: 0 5px;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    #standby .standby-dots span:nth-child(2) { animation-delay: 0.2s; }
+    #standby .standby-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ── MAIN LAYOUT ── */
+    #display {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* ── LEFT PANEL ── */
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4vh 5vw 4vh 6vw;
+      gap: 5vh;
+      border-right: 2px solid var(--border);
+      background: var(--surface);
+    }
+
+    .trip-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1.4rem, 2.8vh, 2.2rem);
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── INFO BLOCKS ── */
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .info-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1rem, 2.2vh, 1.6rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--label);
+    }
+
+    .info-value {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .info-value.huge {
+      font-size: clamp(4rem, 12vh, 9rem);
+      color: var(--accent);
+    }
+
+    .info-value.large {
+      font-size: clamp(2.5rem, 7vh, 5.5rem);
+    }
+
+    .info-sub {
+      font-family: 'Barlow', sans-serif;
+      font-size: clamp(1rem, 2.4vh, 1.8rem);
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .divider {
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* ── DISTANCE BLOCK ── */
+    .distance-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .distance-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(2.5rem, 7vh, 5.5rem);
+      font-weight: 900;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .distance-unit {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1.4rem, 3.5vh, 2.8rem);
+      font-weight: 700;
+      color: var(--green);
+      opacity: 0.7;
+    }
+
+    /* ── LAST UPDATE ── */
+    .update-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: auto;
+    }
+
+    .update-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .update-text {
+      font-size: clamp(0.75rem, 1.6vh, 1.1rem);
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── MAP PANEL ── */
+    .map-panel {
+      position: relative;
+      background: #0a0f18;
+    }
+
+    .map-panel iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .map-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes drift {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-12px); }
+    }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40%           { opacity: 1;   transform: scale(1.1); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in { animation: fadeIn 0.5s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- STANDBY -->
+<div id="standby">
+  <div class="bus-icon">🚌</div>
+  <div class="standby-label">Receiving Trip Data</div>
+  <div class="standby-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- LIVE DISPLAY -->
+<div id="display">
+  <div class="layout">
+
+    <!-- LEFT: Info -->
+    <div class="info-panel">
+
+      <div class="trip-name" id="tripName">—</div>
+
+      <div class="info-block">
+        <div class="info-label">Destination ETA</div>
+        <div class="info-value huge" id="etaDestination">—</div>
+        <div class="info-sub" id="destName">—</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-block">
+        <div class="info-label">Next Stop</div>
+        <div class="info-value large" id="etaNextStop">—</div>
+        <div class="info-sub" id="nextStopName">—</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-block">
+        <div class="info-label">Distance Remaining</div>
+        <div class="distance-row">
+          <div class="distance-num" id="distNum">—</div>
+          <div class="distance-unit" id="distUnit"></div>
+        </div>
+      </div>
+
+      <div class="update-row">
+        <div class="update-dot"></div>
+        <div class="update-text" id="lastUpdate">Waiting for update...</div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Map -->
+    <div class="map-panel" id="mapPanel">
+      <div class="map-placeholder" id="mapPlaceholder">Awaiting position...</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL      = 'https://xumvkilemhtglrvueqtu.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_WNs4wTiZ8tPGSKySXO2M8Q_HT8dkArv';
+  const REFRESH_MS        = 30000;
+
+  let lastLat = null;
+  let lastLng = null;
+  let lastZoom = null;
+
+  // Size map panel as a square based on viewport height
+  function sizeMapPanel() {
+    const panel = document.getElementById('mapPanel');
+    const h = window.innerHeight;
+    panel.style.width  = h + 'px';
+    panel.style.height = h + 'px';
+  }
+
+  sizeMapPanel();
+  window.addEventListener('resize', sizeMapPanel);
+
+  function getZoom(distanceStr) {
+    if (!distanceStr || distanceStr === '—') return 10;
+    const miles = parseFloat(distanceStr);
+    if (isNaN(miles)) return 10;
+    if (miles < 5)  return 12;
+    if (miles < 20) return 11;
+    return 10;
+  }
+
+  function timeSince(isoString) {
+    if (!isoString) return '';
+    const mins = Math.floor((Date.now() - new Date(isoString)) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    return `${mins} mins ago`;
+  }
+
+  function updateMap(lat, lng, zoom) {
+    const panel = document.getElementById('mapPanel');
+    const placeholder = document.getElementById('mapPlaceholder');
+
+    // Only rebuild iframe if position or zoom changed
+    if (lat === lastLat && lng === lastLng && zoom === lastZoom) return;
+
+    lastLat  = lat;
+    lastLng  = lng;
+    lastZoom = zoom;
+
+    placeholder.style.display = 'none';
+
+    const src = `https://www.google.com/maps?q=${lat},${lng}&z=${zoom}&output=embed`;
+    let iframe = panel.querySelector('iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.setAttribute('allowfullscreen', '');
+      panel.appendChild(iframe);
+    }
+    iframe.src = src;
+  }
+
+  function parseDistance(distStr) {
+    if (!distStr || distStr === '—') return { num: '—', unit: '' };
+    const parts = distStr.trim().split(' ');
+    return { num: parts[0], unit: parts[1] || '' };
+  }
+
+  function renderTrip(state) {
+    const standby  = document.getElementById('standby');
+    const display  = document.getElementById('display');
+
+    if (!state || state.status === 'inactive') {
+      standby.style.display = 'flex';
+      display.style.display = 'none';
+      return;
+    }
+
+    standby.style.display = 'none';
+    display.style.display = 'block';
+
+    // Trip name
+    document.getElementById('tripName').textContent = state.trip_name || '';
+
+    // Destination ETA
+    document.getElementById('etaDestination').textContent = state.eta_destination || '—';
+    document.getElementById('destName').textContent = state.destination || '';
+
+    // Next stop
+    document.getElementById('etaNextStop').textContent = state.eta_next_stop || '—';
+
+    // Find next upcoming stop name
+    let nextStopName = '';
+    if (state.stops && Array.isArray(state.stops)) {
+      const next = state.stops.find(s => s.status === 'upcoming' || s.status === 'active');
+      if (next) nextStopName = next.name || next.address || '';
+    }
+    document.getElementById('nextStopName').textContent = nextStopName;
+
+    // Distance
+    const { num, unit } = parseDistance(state.distance_remaining);
+    document.getElementById('distNum').textContent  = num;
+    document.getElementById('distUnit').textContent = unit;
+
+    // Last update
+    document.getElementById('lastUpdate').textContent =
+      state.updated_at ? `Last update: ${timeSince(state.updated_at)}` : '';
+
+    // Map
+    if (state.lat && state.lng) {
+      const zoom = getZoom(state.distance_remaining);
+      updateMap(parseFloat(state.lat), parseFloat(state.lng), zoom);
+    }
+  }
+
+  async function fetchTripState() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/trip_state?select=*&order=updated_at.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const data = await res.json();
+      return data && data.length > 0 ? data[0] : null;
+    } catch(e) {
+      console.warn('Supabase fetch failed', e);
+      return null;
+    }
+  }
+
+  async function refresh() {
+    const state = await fetchTripState();
+    renderTrip(state);
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
