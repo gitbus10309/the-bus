@@ -1212,7 +1212,11 @@
     let etaNextStop = '—';
 
     try {
-      const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}`;
+     const upcomingWaypoints = stopStatuses
+  .filter(s => s.status === 'upcoming' && s.address)
+  .map(s => s.address)
+  .join('|');
+const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}${upcomingWaypoints ? '&waypoints=' + encodeURIComponent(upcomingWaypoints) : ''}`;
       const res  = await fetch(proxyUrl);
       const data = await res.json();
 
