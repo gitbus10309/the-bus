@@ -304,12 +304,12 @@
   });
 
   function getZoom(distanceStr) {
-    if (!distanceStr || distanceStr === '—') return 10;
+    if (!distanceStr || distanceStr === '—') return 11;
     const miles = parseFloat(distanceStr);
-    if (isNaN(miles)) return 10;
-    if (miles < 5)  return 12;
-    if (miles < 20) return 11;
-    return 10;
+    if (isNaN(miles)) return 11;
+    if (miles < 5)  return 13;
+    if (miles < 20) return 12;
+    return 11;
   }
 
   function timeSince(isoString) {
