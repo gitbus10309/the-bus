@@ -371,16 +371,25 @@
           <label>Cloudflare Worker URL</label>
           <input type="text" id="cfgWorkerUrl" placeholder="https://bus-eta-proxy.yourname.workers.dev" />
         </div>
-        <div class="field">
-          <label>YouTube Live Video ID</label>
-          <input type="text" id="cfgYoutubeId" placeholder="dQw4w9WgXcQ" />
-        </div>
         <div class="field full">
           <label>Your GitHub Pages URL (for QR codes)</label>
           <input type="text" id="cfgSiteUrl" placeholder="https://yourusername.github.io/bus" />
         </div>
+        <div class="field">
+          <label>GitHub Personal Access Token</label>
+          <input type="password" id="cfgGithubToken" placeholder="ghp_..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Config Repo (user/repo)</label>
+          <input type="text" id="cfgGithubRepo" placeholder="gitbus10309/bus-config" />
+        </div>
       </div>
-      <button class="btn btn-outline" onclick="saveKeys()">Save Keys</button>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+        <button class="btn btn-outline" onclick="saveKeys()">Save Keys</button>
+        <button class="btn btn-outline" onclick="exportConfig()">⬆ Export Config</button>
+        <button class="btn btn-outline" onclick="importConfig()">⬇ Import Config</button>
+      </div>
+
       <div class="keys-note" style="margin-top:0.75rem">
         Keys are saved locally on this device only — never shared with passengers.
         Get a free Supabase project at <a href="https://supabase.com" target="_blank">supabase.com</a>.
@@ -409,7 +418,7 @@
           <label>Origin (full address)</label>
           <div class="addr-wrap" id="wrap-tripOrigin">
             <input type="text" id="tripOrigin" placeholder="e.g. 123 Main St, Wichita, KS"
-              oninput="renderStops(); onAddrInput('tripOrigin')"
+              oninput="onAddrInput('tripOrigin')" onchange="renderStops()"
               onfocus="openAddrDropdown('tripOrigin')"
               onblur="closeAddrDropdown('tripOrigin')" autocomplete="off" />
             <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripOrigin')">💾</button>
@@ -420,20 +429,23 @@
           <label>Destination (full address)</label>
           <div class="addr-wrap" id="wrap-tripDest">
             <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO"
-              oninput="renderStops(); onAddrInput('tripDest')"
+              oninput="onAddrInput('tripDest')" onchange="renderStops()"
               onfocus="openAddrDropdown('tripDest')"
               onblur="closeAddrDropdown('tripDest')" autocomplete="off" />
             <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripDest')">💾</button>
             <div class="addr-dropdown" id="dd-tripDest"></div>
           </div>
         </div>
-        <div class="field full">
-          <label>Google Maps Share Link (for passenger map)</label>
-          <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+        <div class="field full" style="display:flex;gap:0.7rem;align-items:flex-end">
+          <div class="field" style="flex:1">
+            <label>Google Maps Share Link (for passenger map)</label>
+            <input type="text" id="tripMapsUrl" placeholder="Paste your Google Maps share URL" />
+          </div>
+
         </div>
         <div class="field full">
           <label>Trip Message (shown to passengers on the tracker page)</label>
-          <textarea id="tripMessage" rows="4" placeholder="e.g. Welcome aboard! Departure is at 10:00am. Stops: Topeka (approx 11:30am), KC arrival approx 1:00pm. Questions? Text 316-555-0000."
+          <textarea id="tripMessage" rows="4" placeholder=""
             style="background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:0.55rem 0.85rem;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600;color:var(--text);outline:none;width:100%;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;line-height:1.6"></textarea>
         </div>
         <div class="field">
@@ -463,6 +475,24 @@
 
       <div class="keys-note" style="margin-top:0.75rem">
         Set a new 4-digit PIN for each charter. Passengers scan the QR code and go straight in — no typing needed. Change the PIN after each trip to lock out previous passengers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Trips -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">💾</div>
+      <span class="card-title">Saved Trips</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
+        <button class="btn btn-green" onclick="saveTrip()">💾 Save Current Trip</button>
+        <button class="btn btn-outline" onclick="deleteSavedTrip()" id="deleteTripBtn" style="display:none">🗑 Delete</button>
+      </div>
+      <div id="savedTripsList" style="display:flex;flex-direction:column;gap:0.4rem"></div>
+      <div class="keys-note" style="margin-top:0.75rem">
+        Save trip details to quickly reload for repeat charters. Stops, origin, destination, and message are all saved. PIN is not saved — enter that fresh each trip.
       </div>
     </div>
   </div>
@@ -519,7 +549,7 @@
     </div>
     <div class="card-body">
       <p style="font-size:0.82rem;font-weight:600;color:var(--muted);margin-bottom:0.75rem">
-        Tap <strong>Arrived</strong> when you pull in — ETA freezes. Tap <strong>Departed</strong> when you leave — ETA resumes.
+        Mark stops as completed as you depart them. This updates the passenger timeline in real time.
       </p>
       <div id="stopButtons"></div>
     </div>
@@ -535,6 +565,32 @@
   let nextPingAt = null;
   let stops = [];
   let stopStatuses = [];
+  let wakeLock = null;
+
+  // ── WAKE LOCK ─────────────────────────────────────────────────────────
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      addLog('Wake lock not supported on this device', 'info');
+      return;
+    }
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      addLog('Screen wake lock active — display will stay on', 'ok');
+      wakeLock.addEventListener('release', () => {
+        if (tripActive) setTimeout(requestWakeLock, 2000);
+      });
+    } catch(e) {
+      addLog(`Wake lock unavailable: ${e.message}`, 'info');
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+      addLog('Screen wake lock released', 'info');
+    }
+  }
 
   function getPingIntervalMs() {
     const mins = parseFloat(document.getElementById('pingFrequency').value) || 1.5;
@@ -605,18 +661,33 @@
       return;
     }
 
-    dd.innerHTML = filtered.map(addr => `
-      <div class="addr-item">
-        <span class="addr-item-text" onmousedown="event.preventDefault(); pickAddr('${fieldId}', ${JSON.stringify(addr)})">${addr}</span>
-        <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddrAndRefresh('${fieldId}', ${JSON.stringify(addr)})" title="Remove">✕</button>
+    dd.innerHTML = filtered.map((addr, idx) => `
+      <div class="addr-item" data-addr="${addr.replace(/"/g,'&quot;')}" data-field="${fieldId}">
+        <span class="addr-item-text">${addr}</span>
+        <button class="addr-item-del" title="Remove">✕</button>
       </div>
     `).join('');
+
+    // Attach events after rendering to avoid inline quoting issues
+    dd.querySelectorAll('.addr-item').forEach(item => {
+      const addr = item.getAttribute('data-addr');
+      const fid  = item.getAttribute('data-field');
+      item.querySelector('.addr-item-text').addEventListener('mousedown', e => {
+        e.preventDefault();
+        pickAddr(fid, addr);
+      });
+      item.querySelector('.addr-item-del').addEventListener('mousedown', e => {
+        e.preventDefault();
+        deleteAddrAndRefresh(fid, addr);
+      });
+    });
   }
 
   function pickAddr(fieldId, val) {
     document.getElementById(fieldId).value = val;
     document.getElementById(`dd-${fieldId}`).classList.remove('open');
-    if (fieldId === 'tripOrigin' || fieldId === 'tripDest') renderStops();
+    // Use setTimeout so the field value is set before renderStops rebuilds the DOM
+    if (fieldId === 'tripOrigin' || fieldId === 'tripDest') setTimeout(renderStops, 50);
   }
 
   function deleteAddrAndRefresh(fieldId, val) {
@@ -625,6 +696,39 @@
   }
 
   // Stop address book helper — used inline in renderStops
+  function renderStopAddrDropdown(idx, dd, filter) {
+    const book = getAddressBook();
+    const filtered = filter
+      ? book.filter(a => a.toLowerCase().includes(filter.toLowerCase()))
+      : book;
+
+    if (filtered.length === 0) {
+      dd.innerHTML = `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
+      return;
+    }
+
+    dd.innerHTML = filtered.map(addr => `
+      <div class="addr-item" data-addr="${addr.replace(/"/g,'&quot;')}">
+        <span class="addr-item-text">${addr}</span>
+        <button class="addr-item-del" title="Remove">✕</button>
+      </div>
+    `).join('');
+
+    dd.querySelectorAll('.addr-item').forEach(item => {
+      const addr = item.getAttribute('data-addr');
+      item.querySelector('.addr-item-text').addEventListener('mousedown', e => {
+        e.preventDefault();
+        stops[idx].address = addr;
+        setTimeout(renderStops, 50);
+      });
+      item.querySelector('.addr-item-del').addEventListener('mousedown', e => {
+        e.preventDefault();
+        deleteAddr(addr);
+        renderStopAddrDropdown(idx, dd, stops[idx].address || '');
+      });
+    });
+  }
+
   function stopAddrPick(idx, val) {
     stops[idx].address = val;
     // Close any open dropdowns by re-rendering
@@ -640,6 +744,107 @@
       if (book.length > 30) book.pop();
       saveAddressBook(book);
     }
+  }
+
+  // ── SAVED TRIPS ──────────────────────────────────────────────────────
+  function getSavedTrips() {
+    try { return JSON.parse(localStorage.getItem('savedTrips') || '[]'); } catch { return []; }
+  }
+
+  function saveTrip() {
+    const name = document.getElementById('tripName').value.trim();
+    if (!name) { alert('Enter a Trip Name before saving.'); return; }
+
+    const trip = {
+      id: Date.now(),
+      tripName:    name,
+      origin:      document.getElementById('tripOrigin').value.trim(),
+      destination: document.getElementById('tripDest').value.trim(),
+      mapsUrl:     document.getElementById('tripMapsUrl').value.trim(),
+      tripMessage: document.getElementById('tripMessage').value.trim(),
+      stops:       stops.map(s => ({ ...s })),
+    };
+
+    const saved = getSavedTrips();
+    // Replace if same name exists, otherwise add
+    const idx = saved.findIndex(t => t.tripName === name);
+    if (idx >= 0) {
+      if (!confirm(`Overwrite saved trip "${name}"?`)) return;
+      saved[idx] = trip;
+    } else {
+      saved.unshift(trip);
+      if (saved.length > 20) saved.pop();
+    }
+
+    localStorage.setItem('savedTrips', JSON.stringify(saved));
+    renderSavedTrips();
+    addLog('Trip saved: ' + name, 'ok');
+  }
+
+  function loadTrip(id) {
+    const saved = getSavedTrips();
+    const trip  = saved.find(t => t.id === id);
+    if (!trip) return;
+
+    document.getElementById('tripName').value    = trip.tripName    || '';
+    document.getElementById('tripOrigin').value  = trip.origin      || '';
+    document.getElementById('tripDest').value    = trip.destination || '';
+    document.getElementById('tripMapsUrl').value = trip.mapsUrl     || '';
+    document.getElementById('tripMessage').value = trip.tripMessage || '';
+
+    if (trip.stops && trip.stops.length > 0) {
+      stops = trip.stops.map(s => ({ ...s, status: 'upcoming' }));
+    }
+    renderStops();
+    addLog('Trip loaded: ' + trip.tripName, 'ok');
+  }
+
+  function deleteSavedTrip() {
+    const active = document.querySelector('#savedTripsList .saved-trip-row.active-trip');
+    if (!active) return;
+    const id = parseInt(active.getAttribute('data-id'));
+    const saved = getSavedTrips().filter(t => t.id !== id);
+    localStorage.setItem('savedTrips', JSON.stringify(saved));
+    renderSavedTrips();
+    addLog('Saved trip deleted', 'ok');
+  }
+
+  function renderSavedTrips() {
+    const list   = document.getElementById('savedTripsList');
+    const delBtn = document.getElementById('deleteTripBtn');
+    const saved  = getSavedTrips();
+
+    if (saved.length === 0) {
+      list.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);font-weight:600">No saved trips yet.</div>';
+      delBtn.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = saved.map(t => `
+      <div class="saved-trip-row" data-id="${t.id}"
+        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;
+               background:var(--bg);border:2px solid var(--border);border-radius:10px;
+               cursor:pointer;transition:border-color 0.2s"
+        onclick="selectSavedTrip(${t.id})">
+        <span style="font-size:0.82rem;font-weight:800;flex:1">${t.tripName}</span>
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600">${t.origin ? t.origin.split(',')[0] : ''} → ${t.destination ? t.destination.split(',')[0] : ''}</span>
+      </div>
+    `).join('');
+  }
+
+  function selectSavedTrip(id) {
+    // Highlight selected
+    document.querySelectorAll('.saved-trip-row').forEach(r => {
+      r.classList.remove('active-trip');
+      r.style.borderColor = 'var(--border)';
+    });
+    const row = document.querySelector(`.saved-trip-row[data-id="${id}"]`);
+    if (row) {
+      row.classList.add('active-trip');
+      row.style.borderColor = 'var(--accent)';
+    }
+    document.getElementById('deleteTripBtn').style.display = 'inline-flex';
+    loadTrip(id);
   }
 
   // ── PING FREQUENCY PERSISTENCE ────────────────────────────────────────
@@ -664,10 +869,13 @@
     document.getElementById('cfgSupabaseKey').value = localStorage.getItem('supabaseKey') || '';
     document.getElementById('cfgGoogleKey').value   = localStorage.getItem('googleKey')   || '';
     document.getElementById('cfgWorkerUrl').value   = localStorage.getItem('workerUrl')   || '';
-    document.getElementById('cfgYoutubeId').value   = localStorage.getItem('youtubeId')   || '';
+
     document.getElementById('cfgSiteUrl').value     = localStorage.getItem('siteUrl')     || '';
+    document.getElementById('cfgGithubToken').value  = localStorage.getItem('githubToken')  || '';
+    document.getElementById('cfgGithubRepo').value   = localStorage.getItem('githubRepo')   || '';
     loadPingFrequency();
     loadDefaultStops();
+    renderSavedTrips();
     updateStatusCard();
     setTimeout(updateQrCode, 200);
   });
@@ -677,8 +885,9 @@
     localStorage.setItem('supabaseKey', document.getElementById('cfgSupabaseKey').value.trim());
     localStorage.setItem('googleKey',   document.getElementById('cfgGoogleKey').value.trim());
     localStorage.setItem('workerUrl',   document.getElementById('cfgWorkerUrl').value.trim());
-    localStorage.setItem('youtubeId',   document.getElementById('cfgYoutubeId').value.trim());
     localStorage.setItem('siteUrl',     document.getElementById('cfgSiteUrl').value.trim());
+    localStorage.setItem('githubToken', document.getElementById('cfgGithubToken').value.trim());
+    localStorage.setItem('githubRepo',  document.getElementById('cfgGithubRepo').value.trim());
     flashBtn(event.target, '✓ Saved!');
     updateQrCode();
   }
@@ -801,24 +1010,10 @@
           <div class="stop-num" style="background:${isOrigin ? 'var(--accent2)' : 'var(--accent)'}">${i + 1}</div>
           <div class="stop-inputs">
             <input type="text" value="${stop.name}" disabled style="opacity:0.6;cursor:not-allowed;flex:2" />
-            <input type="text" placeholder="Planned duration (e.g. 20 min)" value="${stop.duration || ''}"
-              oninput="stops[${i}].duration = this.value" style="max-width:140px" />
           </div>
         `;
       } else {
-        // Build address book dropdown HTML for this stop
-        const book = getAddressBook();
         const addrVal = stop.address || '';
-        const filtered = addrVal
-          ? book.filter(a => a.toLowerCase().includes(addrVal.toLowerCase()))
-          : book;
-        const ddItems = filtered.length > 0
-          ? filtered.map(addr => `
-              <div class="addr-item">
-                <span class="addr-item-text" onmousedown="event.preventDefault(); stops[${i}].address='${addr.replace(/'/g,"\\'")}'; renderStops()">${addr}</span>
-                <button class="addr-item-del" onmousedown="event.preventDefault(); deleteAddr(${JSON.stringify(addr)}); renderStops()" title="Remove">✕</button>
-              </div>`).join('')
-          : `<div class="addr-empty">${book.length === 0 ? 'No saved addresses yet' : 'No matches'}</div>`;
 
         row.innerHTML = `
           <div class="stop-num">${i + 1}</div>
@@ -827,18 +1022,34 @@
               oninput="stops[${i}].name = this.value" />
             <div style="position:relative;flex:1;min-width:100px">
               <input type="text" placeholder="Full address for ETA" value="${addrVal}"
-                oninput="stops[${i}].address = this.value; renderStops()"
-                onfocus="this.nextElementSibling.nextElementSibling.classList.add('open')"
-                onblur="setTimeout(()=>this.nextElementSibling.nextElementSibling.classList.remove('open'),200)"
+                oninput="stops[${i}].address = this.value"
                 autocomplete="off" style="width:100%;padding-right:2rem" />
               <button class="addr-save-btn" title="Save address" onmousedown="event.preventDefault(); stopAddrSave(${i}); this.textContent='✓'; setTimeout(()=>this.textContent='💾',1500)">💾</button>
-              <div class="addr-dropdown open" style="display:${filtered.length > 0 || book.length === 0 ? 'none' : 'none'}" id="stop-dd-${i}">${ddItems}</div>
+              <div class="addr-dropdown" id="stop-dd-${i}"></div>
             </div>
-            <input type="text" placeholder="Duration (e.g. 20 min)" value="${stop.duration || ''}"
+            <input type="text" placeholder="HH:MM" value="${stop.duration || ''}"
               oninput="stops[${i}].duration = this.value" style="max-width:120px" />
           </div>
           <button class="stop-remove" onclick="removeStop(${stop.id})" title="Remove">✕</button>
         `;
+
+        // Wire up stop address dropdown with event listeners after render
+        const addrInput = row.querySelector('input[placeholder="Full address for ETA"]');
+        const stopDd    = row.querySelector('.addr-dropdown');
+        const stopIdx   = i;
+
+        addrInput.addEventListener('focus', () => {
+          renderStopAddrDropdown(stopIdx, stopDd, addrInput.value);
+          stopDd.classList.add('open');
+        });
+        addrInput.addEventListener('input', () => {
+          stops[stopIdx].address = addrInput.value;
+          renderStopAddrDropdown(stopIdx, stopDd, addrInput.value);
+          stopDd.classList.add('open');
+        });
+        addrInput.addEventListener('blur', () => {
+          setTimeout(() => stopDd.classList.remove('open'), 200);
+        });
       }
       list.appendChild(row);
     });
@@ -890,6 +1101,7 @@
 
     tripActive = true;
     updateStatusCard();
+    await requestWakeLock();
     startGpsPinger();
     await doPing();
   }
@@ -898,6 +1110,7 @@
     if (!confirm('End the trip? This will clear the passenger view.')) return;
     tripActive = false;
     stopGpsPinger();
+    await releaseWakeLock();
     updateStatusCard();
     await pushToSupabase({ status: 'inactive' });
     addLog('Trip ended', 'ok');
@@ -960,14 +1173,11 @@
       const dest      = document.getElementById('tripDest').value.trim();
       const name      = document.getElementById('tripName').value.trim();
       const mapsUrl   = document.getElementById('tripMapsUrl').value.trim();
-      const youtubeId = localStorage.getItem('youtubeId') || '';
-
       const state = {
         status: 'active',
         trip_name: name,
         origin: stops[0]?.name || origin,
         destination: stops[stops.length - 1]?.name || dest,
-        youtube_id: youtubeId,
         maps_url: mapsUrl,
         trip_message: document.getElementById('tripMessage').value.trim() || null,
         access_pin: document.getElementById('tripPin').value.trim() || null,
@@ -1014,7 +1224,22 @@
 
       const leg          = data.routes[0].legs[0];
       const durationSecs = leg.duration_in_traffic?.value || leg.duration.value;
-      const arrivalTime  = new Date(Date.now() + durationSecs * 1000);
+
+      // Add planned stop durations for all remaining stops (not yet departed)
+      const stopDurationMins = stopStatuses
+        .filter(s => s.status !== 'done' && s.duration)
+        .reduce((total, s) => {
+          const parts = String(s.duration).trim().split(':');
+          if (parts.length === 2) {
+            const hrs  = parseInt(parts[0]) || 0;
+            const mins = parseInt(parts[1]) || 0;
+            return total + hrs * 60 + mins;
+          }
+          return total;
+        }, 0);
+
+      const totalSecs    = durationSecs + stopDurationMins * 60;
+      const arrivalTime  = new Date(Date.now() + totalSecs * 1000);
       const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const distStr      = leg.distance.text;
       const distMeters   = leg.distance.value;
@@ -1085,7 +1310,6 @@
       wrap.style.cssText = 'display:inline-flex;gap:0.4rem;margin-bottom:0.5rem;margin-right:0.5rem;';
 
       if (stop.status === 'done') {
-        // Completed — show greyed label only
         const btn = document.createElement('button');
         btn.className = 'btn btn-outline';
         btn.textContent = `✓ Departed ${label}`;
@@ -1093,7 +1317,6 @@
         wrap.appendChild(btn);
 
       } else if (stop.status === 'at_stop') {
-        // Arrived, not yet departed — show Departed button only
         const btnDepart = document.createElement('button');
         btnDepart.className = 'btn btn-green';
         btnDepart.textContent = `🚌 Depart ${label}`;
@@ -1101,15 +1324,12 @@
         wrap.appendChild(btnDepart);
 
       } else if (stop.status === 'active') {
-        // En route to this stop — show Arrived button only
         const btnArrive = document.createElement('button');
         btnArrive.className = 'btn btn-amber';
         btnArrive.textContent = `🅿 Arrived ${label}`;
         btnArrive.onclick = () => markStopArrived(i);
         wrap.appendChild(btnArrive);
-
       }
-      // 'upcoming' stops show nothing — not our problem yet
 
       if (wrap.children.length > 0) container.appendChild(wrap);
     });
@@ -1126,7 +1346,6 @@
   async function markStopDeparted(idx) {
     stopStatuses[idx].status = 'done';
     stopStatuses[idx].departed = new Date().toISOString();
-    // Advance next upcoming stop to active
     const nextIdx = stopStatuses.findIndex((s, i) => i > idx && s.status === 'upcoming');
     if (nextIdx !== -1) stopStatuses[nextIdx].status = 'active';
     renderStopButtons();
@@ -1150,6 +1369,114 @@
     btn.textContent = msg;
     setTimeout(() => btn.textContent = orig, 2000);
   }
+
+  // ── CONFIG EXPORT / IMPORT via GitHub ───────────────────────────────
+  function getGithubToken() { return localStorage.getItem('githubToken') || document.getElementById('cfgGithubToken').value.trim(); }
+  function getGithubRepo()  { return localStorage.getItem('githubRepo')  || document.getElementById('cfgGithubRepo').value.trim(); }
+  const GITHUB_CONFIG_FILE = 'config.txt';
+
+  async function getGithubFileSha() {
+    // Get current SHA of config.txt (needed for update calls)
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (res.status === 404) return null; // file doesn't exist yet
+      const data = await res.json();
+      return data.sha || null;
+    } catch { return null; }
+  }
+
+  async function exportConfig() {
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    if (!token || !repo) {
+      addLog('Export failed — GitHub Token and Config Repo must be saved in API Keys first', 'err');
+      return;
+    }
+
+    const config = {
+      supabaseUrl: localStorage.getItem('supabaseUrl') || document.getElementById('cfgSupabaseUrl').value.trim(),
+      supabaseKey: localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(),
+      googleKey:   localStorage.getItem('googleKey')   || document.getElementById('cfgGoogleKey').value.trim(),
+      workerUrl:   localStorage.getItem('workerUrl')   || document.getElementById('cfgWorkerUrl').value.trim(),
+      siteUrl:     localStorage.getItem('siteUrl')     || document.getElementById('cfgSiteUrl').value.trim(),
+    };
+
+    const encoded = btoa(JSON.stringify(config));
+    const sha     = await getGithubFileSha();
+
+    const body = {
+      message: 'Update GitBus config',
+      content: btoa(encoded), // GitHub API requires base64 of file content
+    };
+    if (sha) body.sha = sha; // required for updates, omit for new file
+
+    try {
+      addLog('Exporting config to GitHub...', 'info');
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        addLog('Config exported to GitHub ✓', 'ok');
+      } else {
+        const err = await res.json();
+        addLog(`GitHub export failed: ${err.message}`, 'err');
+      }
+    } catch(e) {
+      addLog(`GitHub export error: ${e.message}`, 'err');
+    }
+  }
+
+  async function importConfig() {
+    const token = getGithubToken();
+    const repo  = getGithubRepo();
+    if (!token || !repo) {
+      addLog('Import failed — GitHub Token and Config Repo must be saved in API Keys first', 'err');
+      return;
+    }
+
+    try {
+      addLog('Importing config from GitHub...', 'info');
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${GITHUB_CONFIG_FILE}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+
+      if (res.status === 404) {
+        addLog('No config found in GitHub repo — export from another device first', 'err');
+        return;
+      }
+
+      const data    = await res.json();
+      const encoded = atob(data.content.split('\n').join('')); // GitHub wraps base64 in newlines
+      const config  = JSON.parse(atob(encoded));
+
+      const fields = ['supabaseUrl','supabaseKey','googleKey','workerUrl','siteUrl'];
+      const ids    = ['cfgSupabaseUrl','cfgSupabaseKey','cfgGoogleKey','cfgWorkerUrl','cfgSiteUrl'];
+      fields.forEach((key, i) => {
+        if (config[key]) {
+          localStorage.setItem(key, config[key]);
+          document.getElementById(ids[i]).value = config[key];
+        }
+      });
+
+      updateQrCode();
+      addLog('Config imported from GitHub ✓ — tap Save Keys to confirm', 'ok');
+    } catch(e) {
+      addLog(`GitHub import error: ${e.message}`, 'err');
+    }
+  }
+
+  function doImport() {} // no longer used — kept to avoid any reference errors
 
   function getSupabaseUrl() { return localStorage.getItem('supabaseUrl') || document.getElementById('cfgSupabaseUrl').value.trim(); }
   function getSupabaseKey() { return localStorage.getItem('supabaseKey') || document.getElementById('cfgSupabaseKey').value.trim(); }
