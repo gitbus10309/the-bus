@@ -359,9 +359,11 @@
       if (!window.busMap) {
         pendingPos = { pos, zoom };
       } else {
-        window.busMap.setZoom(zoom);
         window.busMarker.setPosition(pos);
         window.busMap.panTo(pos);
+        google.maps.event.addListenerOnce(window.busMap, 'idle', function() {
+          window.busMap.setZoom(zoom);
+        });
       }
     }
 
@@ -433,9 +435,11 @@
     });
 
     if (pendingPos) {
-      window.busMap.setZoom(pendingPos.zoom);
       window.busMarker.setPosition(pendingPos.pos);
       window.busMap.panTo(pendingPos.pos);
+      google.maps.event.addListenerOnce(window.busMap, 'idle', function() {
+        window.busMap.setZoom(pendingPos.zoom);
+      });
       pendingPos = null;
     }
   };
