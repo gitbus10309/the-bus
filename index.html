@@ -657,7 +657,12 @@
       function startHls() {
         if (Hls.isSupported()) {
           if (window.hls) { window.hls.destroy(); }
-          const hls = new Hls({ liveSyncDurationCount: 5, liveMaxLatencyDurationCount: 10 });
+         const hls = new Hls({ 
+  liveSyncDurationCount: 10, 
+  liveMaxLatencyDurationCount: 20,
+  maxBufferLength: 30,
+  maxMaxBufferLength: 60
+});
           window.hls = hls;
           hls.loadSource(CF_HLS_URL);
           hls.attachMedia(video);
