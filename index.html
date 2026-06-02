@@ -643,7 +643,7 @@
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
     // Cloudflare Stream via HLS.js
-    const CF_HLS_URL = 'YOUR_HLS_URL'; // replace with your full .m3u8 URL
+    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/2c2ae61228cde08331f5072a41f83d88/manifest/video.m3u8'; // replace with your full .m3u8 URL
     if (!window.hlsInitialized && state.status === 'active') {
       window.hlsInitialized = true;
       const video       = document.getElementById('busVideo');
