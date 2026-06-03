@@ -1307,60 +1307,96 @@
   function renderStopButtons() {
     const container = document.getElementById('stopButtons');
     container.innerHTML = '';
+    const lastIdx = stopStatuses.length - 1;
+
     stopStatuses.forEach((stop, i) => {
       const label = stop.name || (i === 0 ? 'Origin' : 'Stop ' + i);
+      const isOrigin = i === 0;
+      const isDest   = i === lastIdx;
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'display:inline-flex;gap:0.4rem;margin-bottom:0.5rem;margin-right:0.5rem;';
+      wrap.style.cssText = 'display:block;margin-bottom:0.5rem;';
 
       if (stop.status === 'done') {
+        // White/outline — completed
         const btn = document.createElement('button');
         btn.className = 'btn btn-outline';
-        btn.textContent = `✓ Departed ${label}`;
+        btn.style.cssText = 'width:100%;text-align:center;opacity:0.6;';
+        btn.textContent = isOrigin ? 'Departed Origin' : `Departed ${label}`;
         btn.disabled = true;
         wrap.appendChild(btn);
 
       } else if (stop.status === 'at_stop') {
-        const btnDepart = document.createElement('button');
-        btnDepart.className = 'btn btn-green';
-        btnDepart.textContent = i === 0 ? `🚌 Depart Origin` : `🚌 Depart ${label}`;
-        btnDepart.onclick = () => markStopDeparted(i);
-        wrap.appendChild(btnDepart);
-
-      } else if (stop.status === 'active') {
-        const btnArrive = document.createElement('button');
-        btnArrive.className = 'btn btn-amber';
-        btnArrive.textContent = `🅿 Arrived ${label}`;
-        btnArrive.onclick = () => markStopArrived(i);
-        wrap.appendChild(btnArrive);
+        // Green — ready to depart
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-green';
+        btn.style.cssText = 'width:100%;text-align:center;line-height:1.4;padding:0.7rem 1rem;';
+        if (isOrigin) {
+          btn.textContent = 'Depart Origin';
+        } else if (isDest) {
+          btn.textContent = 'Confirm Trip Complete';
+          btn.onclick = () => confirmTripComplete();
+          wrap.appendChild(btn);
+          container.appendChild(wrap);
+          return;
+        } else {
+          btn.innerHTML = `Confirm Departure<br>${label}`;
+        }
+        btn.onclick = () => markStopDeparted(i);
+        wrap.appendChild(btn);
 
       } else if (stop.status === 'upcoming') {
-        const btnPending = document.createElement('button');
-        btnPending.className = 'btn btn-outline';
-        btnPending.textContent = `⏳ ${label}`;
-        btnPending.disabled = true;
-        btnPending.style.opacity = '0.5';
-        wrap.appendChild(btnPending);
+        // Amber — confirm arrived (tappable), or grey if not yet reachable
+        const btn = document.createElement('button');
+        if (isOrigin) {
+          // Origin upcoming shouldn't happen but handle gracefully
+          btn.className = 'btn btn-outline';
+          btn.disabled = true;
+          btn.textContent = 'Origin';
+        } else if (isDest) {
+          btn.className = 'btn btn-amber';
+          btn.style.cssText = 'width:100%;text-align:center;line-height:1.4;padding:0.7rem 1rem;white-space:pre-line;';
+          btn.innerHTML = 'Confirm Arrived<br>Destination';
+          btn.onclick = () => markStopArrived(i);
+        } else {
+          btn.className = 'btn btn-amber';
+          btn.style.cssText = 'width:100%;text-align:center;line-height:1.4;padding:0.7rem 1rem;white-space:pre-line;';
+          btn.innerHTML = `Confirm Arrived<br>${label}`;
+          btn.onclick = () => markStopArrived(i);
+        }
+        wrap.appendChild(btn);
       }
 
       container.appendChild(wrap);
     });
   }
 
+  async function confirmTripComplete() {
+    if (!confirm('Mark trip as complete and end?')) return;
+    tripActive = false;
+    stopGpsPinger();
+    await releaseWakeLock();
+    updateStatusCard();
+    await pushToSupabase({ status: 'inactive' });
+    addLog('Trip complete ✓', 'ok');
+    document.getElementById('gpsDot').className = 'gps-dot';
+    document.getElementById('gpsText').textContent = 'GPS stopped';
+  }
+
   async function markStopArrived(idx) {
     stopStatuses[idx].status = 'at_stop';
     stopStatuses[idx].arrivedAt = new Date().toISOString();
     renderStopButtons();
-    addLog(`Arrived: ${stopStatuses[idx].name || 'Stop ' + idx} — ETA frozen`, 'ok');
+    const label = stopStatuses[idx].name || 'Stop ' + idx;
+    addLog(`Arrived: ${label} — ETA frozen`, 'ok');
     await doPing();
   }
 
   async function markStopDeparted(idx) {
     stopStatuses[idx].status = 'done';
     stopStatuses[idx].departed = new Date().toISOString();
-    // Next stop stays 'upcoming' until driver taps Arrive manually
     renderStopButtons();
     if (idx === 0) {
-      addLog(`🚌 Departed origin — bus is rolling, ETA now active`, 'ok');
+      addLog('🚌 Departed origin — bus is rolling, ETA now active', 'ok');
     } else {
       addLog(`Departed: ${stopStatuses[idx].name || 'Stop ' + idx} — ETA resumed`, 'ok');
     }
