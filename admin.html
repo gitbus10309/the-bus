@@ -1096,7 +1096,7 @@
 
     stopStatuses = stops.map((s, i) => ({
       ...s,
-      status: i === 0 ? 'at_stop' : i === 1 ? 'active' : 'upcoming'
+      status: i === 0 ? 'at_stop' : 'upcoming'
     }));
 
     tripActive = true;
