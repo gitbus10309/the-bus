@@ -1213,7 +1213,11 @@
     let etaNextStop = '—';
 
     try {
-      const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}`;
+      const upcomingWaypoints = stopStatuses
+        .filter(s => s.status === 'upcoming' && s.address)
+        .map(s => s.address)
+        .join('|');
+      const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}${upcomingWaypoints ? '&waypoints=' + encodeURIComponent(upcomingWaypoints) : ''}`;
       const res  = await fetch(proxyUrl);
       const data = await res.json();
 
@@ -1222,8 +1226,10 @@
         return {};
       }
 
-      const leg          = data.routes[0].legs[0];
-      const durationSecs = leg.duration_in_traffic?.value || leg.duration.value;
+      const legs         = data.routes[0].legs;
+      const durationSecs = legs.reduce((sum, l) => sum + (l.duration_in_traffic?.value || l.duration.value), 0);
+      const distMeters   = legs.reduce((sum, l) => sum + l.distance.value, 0);
+      const distStr      = (distMeters / 1609.34).toFixed(1) + ' mi';
 
       // Add planned stop durations for all remaining stops (not yet departed)
       const stopDurationMins = stopStatuses
@@ -1241,8 +1247,6 @@
       const totalSecs    = durationSecs + stopDurationMins * 60;
       const arrivalTime  = new Date(Date.now() + totalSecs * 1000);
       const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const distStr      = leg.distance.text;
-      const distMeters   = leg.distance.value;
 
       if (nextStop?.address) {
         const proxyUrl2 = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&key=${encodeURIComponent(apiKey)}`;
