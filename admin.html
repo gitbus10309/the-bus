@@ -436,6 +436,10 @@
             <div class="addr-dropdown" id="dd-tripDest"></div>
           </div>
         </div>
+        <div class="field full">
+          <label>Destination Title (short display name for TV — e.g. "Buhler")</label>
+          <input type="text" id="tripDestTitle" placeholder="e.g. Buhler" />
+        </div>
         <div class="field full" style="display:flex;gap:0.7rem;align-items:flex-end">
           <div class="field" style="flex:1">
             <label>Google Maps Share Link (for passenger map)</label>
@@ -757,12 +761,13 @@
 
     const trip = {
       id: Date.now(),
-      tripName:    name,
-      origin:      document.getElementById('tripOrigin').value.trim(),
-      destination: document.getElementById('tripDest').value.trim(),
-      mapsUrl:     document.getElementById('tripMapsUrl').value.trim(),
-      tripMessage: document.getElementById('tripMessage').value.trim(),
-      stops:       stops.map(s => ({ ...s })),
+      tripName:      name,
+      origin:        document.getElementById('tripOrigin').value.trim(),
+      destination:   document.getElementById('tripDest').value.trim(),
+      destTitle:     document.getElementById('tripDestTitle').value.trim(),
+      mapsUrl:       document.getElementById('tripMapsUrl').value.trim(),
+      tripMessage:   document.getElementById('tripMessage').value.trim(),
+      stops:         stops.map(s => ({ ...s })),
     };
 
     const saved = getSavedTrips();
@@ -786,11 +791,12 @@
     const trip  = saved.find(t => t.id === id);
     if (!trip) return;
 
-    document.getElementById('tripName').value    = trip.tripName    || '';
-    document.getElementById('tripOrigin').value  = trip.origin      || '';
-    document.getElementById('tripDest').value    = trip.destination || '';
-    document.getElementById('tripMapsUrl').value = trip.mapsUrl     || '';
-    document.getElementById('tripMessage').value = trip.tripMessage || '';
+    document.getElementById('tripName').value     = trip.tripName    || '';
+    document.getElementById('tripOrigin').value   = trip.origin      || '';
+    document.getElementById('tripDest').value     = trip.destination || '';
+    document.getElementById('tripDestTitle').value= trip.destTitle   || '';
+    document.getElementById('tripMapsUrl').value  = trip.mapsUrl     || '';
+    document.getElementById('tripMessage').value  = trip.tripMessage || '';
 
     if (trip.stops && trip.stops.length > 0) {
       stops = trip.stops.map(s => ({ ...s, status: 'upcoming' }));
@@ -1178,6 +1184,7 @@
         trip_name: name,
         origin: stops[0]?.name || origin,
         destination: stops[stops.length - 1]?.name || dest,
+        destination_title: document.getElementById('tripDestTitle').value.trim() || null,
         maps_url: mapsUrl,
         trip_message: document.getElementById('tripMessage').value.trim() || null,
         access_pin: document.getElementById('tripPin').value.trim() || null,
