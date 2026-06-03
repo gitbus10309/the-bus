@@ -386,8 +386,8 @@
     }
 
     if (hasNextStop) {
-      // Waypoint in queue — use stop name only, drop "STOP:" to avoid redundancy
-      const stopName = midStops[midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active' || s.status === 'at_stop')]?.name || nextStopLabel;
+      // Waypoint in queue — use stop name directly from already-captured label
+      const stopName = nextStopLabel.includes(': ') ? nextStopLabel.split(': ').slice(1).join(': ') : nextStopLabel;
       document.getElementById('nextStopHeader').textContent  = `NEXT ${stopName}`;
       document.getElementById('nextStopAddress').textContent = nextStopAddr;
       document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
