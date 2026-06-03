@@ -1161,7 +1161,7 @@
 
       let etaData = {};
       if (getGoogleKey()) {
-        const atStop = stopStatuses.some(s => s.status === 'at_stop');
+        const atStop = stopStatuses.some((s, i) => i > 0 && s.status === 'at_stop');
         if (atStop) {
           addLog('At planned stop — ETA frozen', 'info');
         } else {
