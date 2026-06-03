@@ -426,19 +426,23 @@
           </div>
         </div>
         <div class="field full">
-          <label>Destination (full address)</label>
-          <div class="addr-wrap" id="wrap-tripDest">
-            <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO"
-              oninput="onAddrInput('tripDest')" onchange="renderStops()"
-              onfocus="openAddrDropdown('tripDest')"
-              onblur="closeAddrDropdown('tripDest')" autocomplete="off" />
-            <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripDest')">💾</button>
-            <div class="addr-dropdown" id="dd-tripDest"></div>
+          <div style="display:flex;gap:0.7rem;align-items:flex-start">
+            <div class="field" style="flex:1">
+              <label>Destination Title</label>
+              <input type="text" id="tripDestTitle" placeholder="e.g. Buhler" />
+            </div>
+            <div class="field" style="flex:2">
+              <label>Destination (full address)</label>
+              <div class="addr-wrap" id="wrap-tripDest">
+                <input type="text" id="tripDest" placeholder="e.g. Union Station, Kansas City, MO"
+                  oninput="onAddrInput('tripDest')" onchange="renderStops()"
+                  onfocus="openAddrDropdown('tripDest')"
+                  onblur="closeAddrDropdown('tripDest')" autocomplete="off" />
+                <button class="addr-save-btn" title="Save to address book" onmousedown="event.preventDefault(); saveAddr('tripDest')">💾</button>
+                <div class="addr-dropdown" id="dd-tripDest"></div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="field full">
-          <label>Destination Title (short display name for TV — e.g. "Buhler")</label>
-          <input type="text" id="tripDestTitle" placeholder="e.g. Buhler" />
         </div>
         <div class="field full" style="display:flex;gap:0.7rem;align-items:flex-end">
           <div class="field" style="flex:1">
@@ -1255,14 +1259,17 @@
       const arrivalTime  = new Date(Date.now() + totalSecs * 1000);
       const etaStr       = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+      let distNextStop = '—';
       if (nextStop?.address) {
         const proxyUrl2 = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(nextStop.address)}&key=${encodeURIComponent(apiKey)}`;
         const res2  = await fetch(proxyUrl2);
         const data2 = await res2.json();
         if (data2.status === 'OK') {
-          const secs2 = data2.routes[0].legs[0].duration_in_traffic?.value || data2.routes[0].legs[0].duration.value;
+          const leg2  = data2.routes[0].legs[0];
+          const secs2 = leg2.duration_in_traffic?.value || leg2.duration.value;
           const arr2  = new Date(Date.now() + secs2 * 1000);
-          etaNextStop = arr2.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          etaNextStop  = arr2.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          distNextStop = (leg2.distance.value / 1609.34).toFixed(1) + ' mi';
         }
       }
 
@@ -1271,6 +1278,7 @@
       return {
         eta_destination:    etaStr,
         eta_next_stop:      etaNextStop,
+        distance_next_stop: distNextStop,
         distance_remaining: distStr,
         progress_pct:       Math.max(0, Math.min(99, Math.round(100 - (distMeters / 400000) * 100)))
       };
