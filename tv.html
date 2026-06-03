@@ -68,7 +68,7 @@
     }
     .info-block { display: flex; flex-direction: column; gap: 0.3rem; }
 
-    /* Label row: ETA left, DISTANCE right — centered over their values */
+    /* Label row: ETA left-aligned, DISTANCE right-aligned */
     .label-row {
       display: flex; justify-content: space-between;
       padding: 0 0;
@@ -77,8 +77,9 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-size: clamp(2.4rem, 5vh, 4rem); font-weight: 700;
       letter-spacing: 0.18em; text-transform: uppercase; color: var(--label);
-      flex: 1; text-align: center;
     }
+    .info-label.eta-label  { text-align: left; }
+    .info-label.dist-label { text-align: right; }
     .info-label.hidden { color: transparent; }
 
     /* Value row: time left, miles right-justified */
@@ -89,6 +90,9 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 900; font-size: clamp(4rem, 11vh, 8.5rem);
       line-height: 1; color: var(--text);
+    }
+    .info-value.time  {
+      font-size: clamp(5rem, 13vh, 10rem);
     }
     .info-value.accent { color: var(--accent); }
     .info-value.green  { color: var(--green);  }
@@ -160,11 +164,11 @@
       <!-- TOP: Destination ETA + Distance -->
       <div class="info-block">
         <div class="label-row">
-          <div class="info-label">ETA</div>
-          <div class="info-label">DISTANCE</div>
+          <div class="info-label eta-label">ETA</div>
+          <div class="info-label dist-label">DISTANCE</div>
         </div>
         <div class="value-row">
-          <div class="info-value accent" id="etaDestination">—</div>
+          <div class="info-value time accent" id="etaDestination">—</div>
           <div class="info-value green right" id="distanceRemaining">—</div>
         </div>
         <div class="info-sub" id="destName">—</div>
@@ -174,15 +178,15 @@
 
       <!-- MIDDLE: Next Stop -->
       <div class="info-block">
-        <div class="info-label" style="text-align:left">NEXT STOP</div>
-        <div class="info-sub" id="nextStopName">—</div>
+        <div class="info-label eta-label">NEXT STOP</div>
+        <div class="info-sub" id="nextStopName" style="display:none">—</div>
         <div class="info-sub" id="nextStopAddress"></div>
         <div class="label-row" style="margin-top:0.4rem">
-          <div class="info-label" id="nextLabelEta">ETA</div>
-          <div class="info-label" id="nextLabelDist">DISTANCE</div>
+          <div class="info-label eta-label" id="nextLabelEta">ETA</div>
+          <div class="info-label dist-label" id="nextLabelDist">DISTANCE</div>
         </div>
         <div class="value-row">
-          <div class="info-value accent" id="etaNextStop">—</div>
+          <div class="info-value time accent" id="etaNextStop">—</div>
           <div class="info-value green right" id="distNextStop">—</div>
         </div>
       </div>
@@ -384,11 +388,11 @@
     }
 
     if (hasNextStop) {
-      // Normal next stop display
-      document.getElementById('nextStopName').textContent    = nextStopLabel;
-      document.getElementById('nextStopAddress').textContent = nextStopAddr;
+      // Normal next stop display — hide name field, show address only
+      document.getElementById('nextStopName').style.display  = 'none';
+      document.getElementById('nextStopAddress').textContent = nextStopAddr || nextStopLabel;
       document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
-      document.getElementById('distNextStop').textContent    = '—'; // per-stop distance not yet tracked
+      document.getElementById('distNextStop').textContent    = state.distance_next_stop || '—';
       document.getElementById('nextLabelEta').classList.remove('hidden');
       document.getElementById('nextLabelDist').classList.remove('hidden');
       document.getElementById('etaNextStop').classList.remove('cream');
@@ -396,9 +400,9 @@
     } else {
       // No next stop — show destination title in cream using time-size font
       const destTitle = state.destination_title || state.destination || '';
-      document.getElementById('nextStopName').textContent    = destTitle;
+      document.getElementById('nextStopName').style.display  = 'none';
       document.getElementById('nextStopAddress').textContent = '';
-      document.getElementById('etaNextStop').textContent     = destTitle ? destTitle : '—';
+      document.getElementById('etaNextStop').textContent     = destTitle || '—';
       document.getElementById('distNextStop').textContent    = '';
       document.getElementById('nextLabelEta').classList.add('hidden');
       document.getElementById('nextLabelDist').classList.add('hidden');
