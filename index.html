@@ -495,7 +495,7 @@
       <div class="panel-header">
         <div class="panel-icon">📷</div>
         <span class="panel-title">Live Camera</span>
-        <span class="panel-sub" id="videoStatus">~15–30 sec delay</span>
+        <span class="panel-sub" id="videoStatus">~30–60 sec delay</span>
       </div>
       <div class="panel-body" id="videoPanel">
         <div class="placeholder" id="videoPlaceholder">
@@ -643,7 +643,7 @@
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
     // Cloudflare Stream via HLS.js
-    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/2c2ae61228cde08331f5072a41f83d88/manifest/video.m3u8'; // replace with your full .m3u8 URL
+   const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/2c2ae61228cde08331f5072a41f83d88/manifest/video.m3u8'; // replace with your full .m3u8 URL
     if (!window.hlsInitialized && state.status === 'active') {
       window.hlsInitialized = true;
       const video       = document.getElementById('busVideo');
@@ -657,19 +657,20 @@
       function startHls() {
         if (Hls.isSupported()) {
           if (window.hls) { window.hls.destroy(); }
-         const hls = new Hls({ 
-  liveSyncDurationCount: 10, 
-  liveMaxLatencyDurationCount: 20,
-  maxBufferLength: 30,
-  maxMaxBufferLength: 60
-});
+          const hls = new Hls({
+            liveSyncDurationCount: 30,
+            liveMaxLatencyDurationCount: 60,
+            maxBufferLength: 120,
+            maxMaxBufferLength: 240,
+            liveDurationInfinity: true
+          });
           window.hls = hls;
           hls.loadSource(CF_HLS_URL);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             video.play();
             signalLost.classList.remove('visible');
-            videoStatus.textContent = '~15–30 sec delay';
+            videoStatus.textContent = '~30–60 sec delay';
           });
           hls.on(Hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
