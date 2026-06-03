@@ -178,17 +178,16 @@
 
       <!-- MIDDLE: Next Stop -->
       <div class="info-block">
-        <div class="info-label eta-label">NEXT STOP</div>
-        <div class="info-sub" id="nextStopName" style="display:none">—</div>
-        <div class="info-sub" id="nextStopAddress"></div>
+        <div class="info-label eta-label" id="nextStopHeader">NEXT STOP</div>
         <div class="label-row" style="margin-top:0.4rem">
           <div class="info-label eta-label" id="nextLabelEta">ETA</div>
           <div class="info-label dist-label" id="nextLabelDist">DISTANCE</div>
         </div>
         <div class="value-row">
-          <div class="info-value time accent" id="etaNextStop">—</div>
-          <div class="info-value green right" id="distNextStop">—</div>
+          <div class="info-value time cream" id="etaNextStop">—</div>
+          <div class="info-value cream right" id="distNextStop">—</div>
         </div>
+        <div class="info-sub" id="nextStopAddress"></div>
       </div>
 
       <div class="divider"></div>
@@ -388,26 +387,28 @@
     }
 
     if (hasNextStop) {
-      // Normal next stop display — hide name field, show address only
-      document.getElementById('nextStopName').style.display  = 'none';
-      document.getElementById('nextStopAddress').textContent = nextStopAddr || nextStopLabel;
+      // Waypoint in queue
+      const stopTitle = nextStopLabel; // e.g. "Stop 1: drop off"
+      document.getElementById('nextStopHeader').textContent  = `NEXT STOP: ${stopTitle}`;
+      document.getElementById('nextStopAddress').textContent = nextStopAddr;
       document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
       document.getElementById('distNextStop').textContent    = state.distance_next_stop || '—';
       document.getElementById('nextLabelEta').classList.remove('hidden');
       document.getElementById('nextLabelDist').classList.remove('hidden');
-      document.getElementById('etaNextStop').classList.remove('cream');
-      document.getElementById('etaNextStop').classList.add('accent');
+      document.getElementById('etaNextStop').classList.add('cream');
+      document.getElementById('distNextStop').classList.add('cream');
     } else {
-      // No next stop — show destination title in cream using time-size font
-      const destTitle = state.destination_title || state.destination || '';
-      document.getElementById('nextStopName').style.display  = 'none';
-      document.getElementById('nextStopAddress').textContent = '';
+      // No waypoint — destination only
+      const destTitle   = state.destination_title || state.destination || '';
+      const destAddress = state.destination || '';
+      document.getElementById('nextStopHeader').textContent  = 'NEXT STOP: DESTINATION';
+      document.getElementById('nextStopAddress').textContent = destAddress;
       document.getElementById('etaNextStop').textContent     = destTitle || '—';
       document.getElementById('distNextStop').textContent    = '';
       document.getElementById('nextLabelEta').classList.add('hidden');
       document.getElementById('nextLabelDist').classList.add('hidden');
-      document.getElementById('etaNextStop').classList.remove('accent');
       document.getElementById('etaNextStop').classList.add('cream');
+      document.getElementById('distNextStop').classList.add('cream');
     }
 
     // Upcoming stops list (all stops after next, not yet done)
