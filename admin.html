@@ -1214,7 +1214,7 @@
 
     try {
       const upcomingWaypoints = stopStatuses
-        .filter(s => s.status === 'upcoming' && s.address)
+        .filter(s => (s.status === 'upcoming' || s.status === 'active') && s.address)
         .map(s => s.address)
         .join('|');
       const proxyUrl = `${workerUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${encodeURIComponent(apiKey)}${upcomingWaypoints ? '&waypoints=' + encodeURIComponent(upcomingWaypoints) : ''}`;
@@ -1357,8 +1357,7 @@
   async function markStopDeparted(idx) {
     stopStatuses[idx].status = 'done';
     stopStatuses[idx].departed = new Date().toISOString();
-    const nextIdx = stopStatuses.findIndex((s, i) => i > idx && s.status === 'upcoming');
-    if (nextIdx !== -1) stopStatuses[nextIdx].status = 'active';
+    // Next stop stays 'upcoming' until driver taps Arrive manually
     renderStopButtons();
     if (idx === 0) {
       addLog(`🚌 Departed origin — bus is rolling, ETA now active`, 'ok');
