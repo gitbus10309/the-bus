@@ -118,9 +118,8 @@
       font-size: clamp(1.8rem, 3.8vh, 3rem); font-weight: 600;
       color: var(--muted); padding: 0.15rem 0;
     }
-    .upcoming-name { flex: 1; }
-    .upcoming-eta  { text-align: center; flex: 0 0 8rem; }
-    .upcoming-dist { text-align: right;  flex: 0 0 8rem; }
+    .upcoming-name     { flex: 1; }
+    .upcoming-duration { text-align: right; flex-shrink: 0; }
 
     /* Last update overlay */
     .update-overlay {
@@ -387,9 +386,9 @@
     }
 
     if (hasNextStop) {
-      // Waypoint in queue
-      const stopTitle = nextStopLabel; // e.g. "Stop 1: drop off"
-      document.getElementById('nextStopHeader').textContent  = `NEXT STOP: ${stopTitle}`;
+      // Waypoint in queue — use stop name only, drop "STOP:" to avoid redundancy
+      const stopName = midStops[midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active' || s.status === 'at_stop')]?.name || nextStopLabel;
+      document.getElementById('nextStopHeader').textContent  = `NEXT ${stopName}`;
       document.getElementById('nextStopAddress').textContent = nextStopAddr;
       document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
       document.getElementById('distNextStop').textContent    = state.distance_next_stop || '—';
@@ -416,19 +415,30 @@
     upcomingList.innerHTML = '';
     if (state.stops && Array.isArray(state.stops)) {
       const midStops = state.stops.slice(1, state.stops.length - 1);
-      // Find next stop index, then show the rest
       const nextIdx = midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active' || s.status === 'at_stop');
       const afterNext = nextIdx !== -1 ? midStops.slice(nextIdx + 1) : [];
-      afterNext.forEach((stop, i) => {
+      afterNext.forEach((stop) => {
         if (stop.status === 'done') return;
         const row = document.createElement('div');
         row.className = 'upcoming-row';
-        const stopNum = nextIdx + 2 + i; // number relative to full midStops
-        const label = stop.name ? `Stop ${stopNum}: ${stop.name}` : `Stop ${stopNum}`;
+        const title = stop.name || '';
+
+        // Format duration from HH:MM
+        let durationStr = '';
+        if (stop.duration) {
+          const parts = String(stop.duration).trim().split(':');
+          if (parts.length === 2) {
+            const hrs  = parseInt(parts[0]) || 0;
+            const mins = parseInt(parts[1]) || 0;
+            if (hrs > 0 && mins > 0)       durationStr = `Duration: ${hrs} hr ${mins} min`;
+            else if (hrs > 0)              durationStr = `Duration: ${hrs} hr`;
+            else if (mins > 0)             durationStr = `Duration: ${mins} min`;
+          }
+        }
+
         row.innerHTML = `
-          <span class="upcoming-name">${label}</span>
-          <span class="upcoming-eta">—</span>
-          <span class="upcoming-dist">—</span>
+          <span class="upcoming-name">${title}</span>
+          <span class="upcoming-duration">${durationStr}</span>
         `;
         upcomingList.appendChild(row);
       });
