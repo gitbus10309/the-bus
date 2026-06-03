@@ -549,7 +549,7 @@
     </div>
     <div class="card-body">
       <p style="font-size:0.82rem;font-weight:600;color:var(--muted);margin-bottom:0.75rem">
-        Mark stops as completed as you depart them. This updates the passenger timeline in real time.
+        Depart origin when the bus rolls out, then mark each stop as you arrive and depart. Updates the passenger timeline in real time.
       </p>
       <div id="stopButtons"></div>
     </div>
@@ -1096,7 +1096,7 @@
 
     stopStatuses = stops.map((s, i) => ({
       ...s,
-      status: i === 0 ? 'done' : i === 1 ? 'active' : 'upcoming'
+      status: i === 0 ? 'at_stop' : i === 1 ? 'active' : 'upcoming'
     }));
 
     tripActive = true;
@@ -1304,8 +1304,7 @@
     const container = document.getElementById('stopButtons');
     container.innerHTML = '';
     stopStatuses.forEach((stop, i) => {
-      if (i === 0) return;
-      const label = stop.name || 'Stop ' + i;
+      const label = stop.name || (i === 0 ? 'Origin' : 'Stop ' + i);
       const wrap = document.createElement('div');
       wrap.style.cssText = 'display:inline-flex;gap:0.4rem;margin-bottom:0.5rem;margin-right:0.5rem;';
 
@@ -1319,7 +1318,7 @@
       } else if (stop.status === 'at_stop') {
         const btnDepart = document.createElement('button');
         btnDepart.className = 'btn btn-green';
-        btnDepart.textContent = `🚌 Depart ${label}`;
+        btnDepart.textContent = i === 0 ? `🚌 Depart Origin` : `🚌 Depart ${label}`;
         btnDepart.onclick = () => markStopDeparted(i);
         wrap.appendChild(btnDepart);
 
@@ -1357,7 +1356,11 @@
     const nextIdx = stopStatuses.findIndex((s, i) => i > idx && s.status === 'upcoming');
     if (nextIdx !== -1) stopStatuses[nextIdx].status = 'active';
     renderStopButtons();
-    addLog(`Departed: ${stopStatuses[idx].name || 'Stop ' + idx} — ETA resumed`, 'ok');
+    if (idx === 0) {
+      addLog(`🚌 Departed origin — bus is rolling, ETA now active`, 'ok');
+    } else {
+      addLog(`Departed: ${stopStatuses[idx].name || 'Stop ' + idx} — ETA resumed`, 'ok');
+    }
     await doPing();
   }
 
