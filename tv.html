@@ -63,14 +63,27 @@
     }
     .trip-name {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(3rem, 6vh, 5rem); font-weight: 700;
+      font-size: clamp(3.3rem, 6.6vh, 5.5rem); font-weight: 700;
       color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
     }
     .info-block { display: flex; flex-direction: column; gap: 0.3rem; }
+
+    /* Label row: ETA left, DISTANCE right — centered over their values */
+    .label-row {
+      display: flex; justify-content: space-between;
+      padding: 0 0;
+    }
     .info-label {
       font-family: 'Barlow Condensed', sans-serif;
       font-size: clamp(2.4rem, 5vh, 4rem); font-weight: 700;
       letter-spacing: 0.18em; text-transform: uppercase; color: var(--label);
+      flex: 1; text-align: center;
+    }
+    .info-label.hidden { color: transparent; }
+
+    /* Value row: time left, miles right-justified */
+    .value-row {
+      display: flex; justify-content: space-between; align-items: baseline;
     }
     .info-value {
       font-family: 'Barlow Condensed', sans-serif;
@@ -79,29 +92,41 @@
     }
     .info-value.accent { color: var(--accent); }
     .info-value.green  { color: var(--green);  }
+    .info-value.cream  { color: var(--cream);  }
+    .info-value.right  { text-align: right; }
     .info-sub {
       font-family: 'Barlow', sans-serif;
       font-size: clamp(2rem, 4vh, 3.2rem); font-weight: 600;
       color: var(--muted); margin-top: 0.15rem;
     }
-    .info-sub2 {
-      font-family: 'Barlow', sans-serif;
-      font-size: clamp(1.6rem, 3.2vh, 2.6rem); font-weight: 400;
-      color: var(--muted); opacity: 0.7;
-    }
     .divider { height: 2px; background: var(--border); border-radius: 2px; flex-shrink: 0; }
-    .distance-row { display: flex; align-items: baseline; gap: 0.4rem; }
-    .distance-unit {
+
+    /* Upcoming stops table */
+    .upcoming-header {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(2.5rem, 6vh, 5rem); font-weight: 700;
-      color: var(--green); opacity: 0.7; line-height: 1;
+      font-size: clamp(2.4rem, 5vh, 4rem); font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--label);
+      margin-bottom: 0.4rem;
     }
-    .update-row { display: flex; align-items: center; gap: 0.6rem; margin-top: auto; }
-    .update-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--green); animation: pulse 2s ease-in-out infinite; flex-shrink: 0;
+    .upcoming-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1.8rem, 3.8vh, 3rem); font-weight: 600;
+      color: var(--muted); padding: 0.15rem 0;
     }
-    .update-text { font-size: clamp(1.6rem, 3vh, 2.4rem); color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
+    .upcoming-name { flex: 1; }
+    .upcoming-eta  { text-align: center; flex: 0 0 8rem; }
+    .upcoming-dist { text-align: right;  flex: 0 0 8rem; }
+
+    /* Last update overlay */
+    .update-overlay {
+      position: absolute; bottom: 1.5vh; right: 1.5vw;
+      background: rgba(13,17,23,0.82); border-radius: 8px;
+      padding: 0.4rem 0.9rem;
+      font-size: clamp(1.2rem, 2.2vh, 1.8rem); font-weight: 600;
+      color: var(--muted); letter-spacing: 0.04em;
+      pointer-events: none;
+    }
 
     /* ── MAP PANEL ── */
     .map-panel { position: relative; background: #0a0f18; flex-shrink: 0; }
@@ -126,41 +151,55 @@
 <div id="display">
   <div class="layout">
     <div class="info-panel">
+
+      <!-- Trip name -->
       <div class="trip-name" id="tripName">—</div>
 
+      <div class="divider"></div>
+
+      <!-- TOP: Destination ETA + Distance -->
       <div class="info-block">
-        <div class="info-label">Destination ETA</div>
-        <div class="info-value accent" id="etaDestination">—</div>
+        <div class="label-row">
+          <div class="info-label">ETA</div>
+          <div class="info-label">DISTANCE</div>
+        </div>
+        <div class="value-row">
+          <div class="info-value accent" id="etaDestination">—</div>
+          <div class="info-value green right" id="distanceRemaining">—</div>
+        </div>
         <div class="info-sub" id="destName">—</div>
       </div>
 
       <div class="divider"></div>
 
+      <!-- MIDDLE: Next Stop -->
       <div class="info-block">
-        <div class="info-label">Next Stop</div>
-        <div class="info-value" id="etaNextStop">—</div>
+        <div class="info-label" style="text-align:left">NEXT STOP</div>
         <div class="info-sub" id="nextStopName">—</div>
         <div class="info-sub" id="nextStopAddress"></div>
+        <div class="label-row" style="margin-top:0.4rem">
+          <div class="info-label" id="nextLabelEta">ETA</div>
+          <div class="info-label" id="nextLabelDist">DISTANCE</div>
+        </div>
+        <div class="value-row">
+          <div class="info-value accent" id="etaNextStop">—</div>
+          <div class="info-value green right" id="distNextStop">—</div>
+        </div>
       </div>
 
       <div class="divider"></div>
 
-      <div class="info-block">
-        <div class="info-label">Distance Remaining</div>
-        <div class="distance-row">
-          <div class="info-value green" id="distNum">—</div>
-          <div class="distance-unit" id="distUnit"></div>
-        </div>
+      <!-- BOTTOM: Upcoming Stops -->
+      <div class="info-block" style="flex:1;overflow:hidden">
+        <div class="upcoming-header">Upcoming Stops</div>
+        <div id="upcomingList"></div>
       </div>
 
-      <div class="update-row">
-        <div class="update-dot"></div>
-        <div class="update-text" id="lastUpdate">Waiting for update...</div>
-      </div>
     </div>
 
-    <div class="map-panel" id="mapPanel">
+    <div class="map-panel" id="mapPanel" style="position:relative">
       <div id="busMap"></div>
+      <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
     </div>
   </div>
 </div>
@@ -321,34 +360,76 @@
     // Trip name
     document.getElementById('tripName').textContent = state.trip_name || '';
 
-    // Destination ETA
+    // Destination ETA + distance (top section)
     document.getElementById('etaDestination').textContent = state.eta_destination || '—';
+    document.getElementById('distanceRemaining').textContent = state.distance_remaining || '—';
     document.getElementById('destName').textContent = state.destination || '';
 
-    // Next stop — find first upcoming, number it by position in midStops
-    document.getElementById('etaNextStop').textContent = state.eta_next_stop || '—';
-    let nextStopLabel = '—';
+    // Next stop — find first upcoming/active in midStops
+    let nextStopLabel = '';
     let nextStopAddr  = '';
+    let hasNextStop   = false;
+
     if (state.stops && Array.isArray(state.stops)) {
       const midStops = state.stops.slice(1, state.stops.length - 1);
-      const nextIdx  = midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active');
+      const nextIdx  = midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active' || s.status === 'at_stop');
       if (nextIdx !== -1) {
+        hasNextStop = true;
         const next    = midStops[nextIdx];
         const stopNum = nextIdx + 1;
-        const label   = next.name ? next.name : '';
+        const label   = next.name || '';
         nextStopLabel = label ? `Stop ${stopNum}: ${label}` : `Stop ${stopNum}`;
         nextStopAddr  = next.address || '';
       }
     }
-    document.getElementById('nextStopName').textContent    = nextStopLabel;
-    document.getElementById('nextStopAddress').textContent = nextStopAddr;
 
-    // Distance
-    const { num, unit } = parseDistance(state.distance_remaining);
-    document.getElementById('distNum').textContent  = num;
-    document.getElementById('distUnit').textContent = unit;
+    if (hasNextStop) {
+      // Normal next stop display
+      document.getElementById('nextStopName').textContent    = nextStopLabel;
+      document.getElementById('nextStopAddress').textContent = nextStopAddr;
+      document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
+      document.getElementById('distNextStop').textContent    = '—'; // per-stop distance not yet tracked
+      document.getElementById('nextLabelEta').classList.remove('hidden');
+      document.getElementById('nextLabelDist').classList.remove('hidden');
+      document.getElementById('etaNextStop').classList.remove('cream');
+      document.getElementById('etaNextStop').classList.add('accent');
+    } else {
+      // No next stop — show destination title in cream using time-size font
+      const destTitle = state.destination_title || state.destination || '';
+      document.getElementById('nextStopName').textContent    = destTitle;
+      document.getElementById('nextStopAddress').textContent = '';
+      document.getElementById('etaNextStop').textContent     = destTitle ? destTitle : '—';
+      document.getElementById('distNextStop').textContent    = '';
+      document.getElementById('nextLabelEta').classList.add('hidden');
+      document.getElementById('nextLabelDist').classList.add('hidden');
+      document.getElementById('etaNextStop').classList.remove('accent');
+      document.getElementById('etaNextStop').classList.add('cream');
+    }
 
-    // Last update
+    // Upcoming stops list (all stops after next, not yet done)
+    const upcomingList = document.getElementById('upcomingList');
+    upcomingList.innerHTML = '';
+    if (state.stops && Array.isArray(state.stops)) {
+      const midStops = state.stops.slice(1, state.stops.length - 1);
+      // Find next stop index, then show the rest
+      const nextIdx = midStops.findIndex(s => s.status === 'upcoming' || s.status === 'active' || s.status === 'at_stop');
+      const afterNext = nextIdx !== -1 ? midStops.slice(nextIdx + 1) : [];
+      afterNext.forEach((stop, i) => {
+        if (stop.status === 'done') return;
+        const row = document.createElement('div');
+        row.className = 'upcoming-row';
+        const stopNum = nextIdx + 2 + i; // number relative to full midStops
+        const label = stop.name ? `Stop ${stopNum}: ${stop.name}` : `Stop ${stopNum}`;
+        row.innerHTML = `
+          <span class="upcoming-name">${label}</span>
+          <span class="upcoming-eta">—</span>
+          <span class="upcoming-dist">—</span>
+        `;
+        upcomingList.appendChild(row);
+      });
+    }
+
+    // Last update overlay
     document.getElementById('lastUpdate').textContent =
       state.updated_at ? `Last update: ${timeSince(state.updated_at)}` : '';
 
