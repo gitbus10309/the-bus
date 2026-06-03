@@ -388,7 +388,7 @@
     if (hasNextStop) {
       // Waypoint in queue — use stop name directly from already-captured label
       const stopName = nextStopLabel.includes(': ') ? nextStopLabel.split(': ').slice(1).join(': ') : nextStopLabel;
-      document.getElementById('nextStopHeader').textContent  = `NEXT ${stopName}`;
+      document.getElementById('nextStopHeader').textContent  = `NEXT STOP: ${stopName}`;
       document.getElementById('nextStopAddress').textContent = nextStopAddr;
       document.getElementById('etaNextStop').textContent     = state.eta_next_stop || '—';
       document.getElementById('distNextStop').textContent    = state.distance_next_stop || '—';
