@@ -590,6 +590,8 @@
       document.getElementById('etaBar').style.display = 'none';
       document.getElementById('stopsPanel').style.display = 'none';
       document.getElementById('tripMessage').style.display = 'none';
+      clearStopMarkers();
+      lastStopsJson = '';
       return;
     }
 
@@ -643,7 +645,7 @@
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
     // Cloudflare Stream via HLS.js
-    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/75bea43c4e89ef265d7d30272ad0dac4/manifest/video.m3u8';
+    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/keyhere/manifest/video.m3u8';
     if (!window.hlsInitialized && state.status === 'active') {
       window.hlsInitialized = true;
       const video       = document.getElementById('busVideo');
@@ -705,6 +707,13 @@
       }
     }
 
+    // Re-render pins only when stop statuses change
+    const stopsJson = JSON.stringify((state.stops || []).map(s => ({ status: s.status, address: s.address })));
+    if (stopsJson !== lastStopsJson) {
+      lastStopsJson = stopsJson;
+      renderPins(state);
+    }
+
     // Stop timeline
     if (state.stops && Array.isArray(state.stops)) {
       const list = document.getElementById('stopsList');
@@ -728,6 +737,102 @@
   }
 
   // Google Maps
+  // ── PIN STATE ─────────────────────────────────────────────────────────
+  let stopMarkers  = [];
+  let destMarker   = null;
+  let lastStopsJson = '';
+
+  // ── STOP PIN SVG (cream, numbered) ──
+  function stopPinSvg(num) {
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
+        <path d="M18 0 C8 0 0 8 0 18 C0 30 18 44 18 44 C18 44 36 30 36 18 C36 8 28 0 18 0 Z"
+              fill="#e8ddd0" stroke="#2a3244" stroke-width="2"/>
+        <text x="18" y="23" text-anchor="middle" font-size="15"
+              font-family="Barlow Condensed, sans-serif" font-weight="900"
+              fill="#0d1117">${num}</text>
+      </svg>`);
+  }
+
+  // ── DESTINATION PIN SVG (orange) ──
+  function destPinSvg() {
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
+        <path d="M18 0 C8 0 0 8 0 18 C0 30 18 44 18 44 C18 44 36 30 36 18 C36 8 28 0 18 0 Z"
+              fill="#f77f2a" stroke="white" stroke-width="2"/>
+        <circle cx="18" cy="18" r="6" fill="white"/>
+      </svg>`);
+  }
+
+  // ── GEOCODE address → {lat,lng} or null ──
+  function geocodeAddress(address) {
+    return new Promise((resolve) => {
+      if (!window.geocoder) window.geocoder = new google.maps.Geocoder();
+      window.geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  // ── CLEAR all stop/dest markers ──
+  function clearStopMarkers() {
+    stopMarkers.forEach(m => m.setMap(null));
+    stopMarkers = [];
+    if (destMarker) { destMarker.setMap(null); destMarker = null; }
+  }
+
+  // ── RENDER stop + destination pins ──
+  async function renderPins(state) {
+    if (!window.busMap) return;
+    clearStopMarkers();
+
+    // Destination pin
+    if (state.destination) {
+      const pos = await geocodeAddress(state.destination);
+      if (pos) {
+        destMarker = new google.maps.Marker({
+          map: window.busMap,
+          position: pos,
+          title: 'Destination',
+          icon: {
+            url: destPinSvg(),
+            scaledSize: new google.maps.Size(36, 44),
+            anchor: new google.maps.Point(18, 44),
+          }
+        });
+      }
+    }
+
+    // Stop pins — mid-stops only, upcoming/active, numbered
+    if (state.stops && Array.isArray(state.stops)) {
+      const midStops = state.stops.slice(1, state.stops.length - 1);
+      for (let i = 0; i < midStops.length; i++) {
+        const stop = midStops[i];
+        if (stop.status === 'done') continue;
+        if (!stop.address) continue;
+        const pos = await geocodeAddress(stop.address);
+        if (pos) {
+          const marker = new google.maps.Marker({
+            map: window.busMap,
+            position: pos,
+            title: stop.name || `Stop ${i + 1}`,
+            icon: {
+              url: stopPinSvg(i + 1),
+              scaledSize: new google.maps.Size(36, 44),
+              anchor: new google.maps.Point(18, 44),
+            }
+          });
+          stopMarkers.push(marker);
+        }
+      }
+    }
+  }
+
   window.initMap = function() {
     window.busMap = new google.maps.Map(document.getElementById('busMap'), {
       zoom: 10,
