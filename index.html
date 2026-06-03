@@ -643,7 +643,7 @@
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
     // Cloudflare Stream via HLS.js
-   const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/75bea43c4e89ef265d7d30272ad0dac4/manifest/video.m3u8'; // replace with your full .m3u8 URL
+    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/75bea43c4e89ef265d7d30272ad0dac4/manifest/video.m3u8';
     if (!window.hlsInitialized && state.status === 'active') {
       window.hlsInitialized = true;
       const video       = document.getElementById('busVideo');
@@ -658,10 +658,13 @@
         if (Hls.isSupported()) {
           if (window.hls) { window.hls.destroy(); }
           const hls = new Hls({
-            liveSyncDurationCount: 30,
-            liveMaxLatencyDurationCount: 60,
-            maxBufferLength: 120,
-            maxMaxBufferLength: 240,
+            enableWorker: true,
+            startFragPrefetch: true,
+            startPosition: -1,
+            liveSyncDurationCount: 50,
+            liveMaxLatencyDurationCount: 100,
+            maxBufferLength: 180,
+            maxMaxBufferLength: 360,
             liveDurationInfinity: true
           });
           window.hls = hls;
