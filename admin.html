@@ -1096,7 +1096,7 @@
 
     stopStatuses = stops.map((s, i) => ({
       ...s,
-      status: i === 0 ? 'done' : 'upcoming'
+      status: i === 0 ? 'done' : i === 1 ? 'active' : 'upcoming'
     }));
 
     tripActive = true;
@@ -1329,9 +1329,17 @@
         btnArrive.textContent = `🅿 Arrived ${label}`;
         btnArrive.onclick = () => markStopArrived(i);
         wrap.appendChild(btnArrive);
+
+      } else if (stop.status === 'upcoming') {
+        const btnPending = document.createElement('button');
+        btnPending.className = 'btn btn-outline';
+        btnPending.textContent = `⏳ ${label}`;
+        btnPending.disabled = true;
+        btnPending.style.opacity = '0.5';
+        wrap.appendChild(btnPending);
       }
 
-      if (wrap.children.length > 0) container.appendChild(wrap);
+      container.appendChild(wrap);
     });
   }
 
