@@ -67,7 +67,7 @@
     /* ── LEFT PANEL — explicit width, text stays left ── */
     .info-panel {
       position: absolute; top: 0; left: 0;
-      width: calc(100vw - 40vh); height: 100vh;
+      width: calc(100vw - 72vh); height: 100vh;
       display: flex; flex-direction: column; justify-content: center;
       padding: 3vh 4vh 3vh 5vh; gap: 2.5vh;
       background: #0a0f18;
@@ -149,12 +149,14 @@
     /* ── MAP PANEL ── */
     .map-panel {
       position: absolute; bottom: 0; right: 0;
-      width: 100vw; height: 100vh;
-      background: transparent;
+      overflow: hidden;
+      background: #0a0f18;
       z-index: 2;
-      transform-origin: bottom right;
       opacity: 0.6; /* DIAGNOSTIC — remove when map sizing resolved */
-      pointer-events: none;
+    }
+    #busMap {
+      position: absolute;
+      top: 0; left: 0;
     }
     #busMap {
       width: 72vh !important;
@@ -229,7 +231,7 @@
     </div>
 
     <div class="map-panel" id="mapPanel">
-      <div id="busMap" style="width:100%;height:100%;"></div>
+      <div id="busMap"></div>
     </div>
     <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
   </div>
@@ -520,14 +522,15 @@
   }
 
   window.initMap = function() {
-    // Scale the entire map panel down to 72vh x 72vh from bottom-right
-    // Google renders at full viewport; transform scales the result
-    const scaleX = (window.innerHeight * 0.72) / window.innerWidth;
-    const scaleY = 0.72; // 72vh / 100vh
-    document.getElementById('mapPanel').style.transform =
-      `scale(${scaleX}, ${scaleY})`;
+    // Set hard pixel dimensions before Maps API touches anything
+    const sizePx = Math.round(window.innerHeight * 0.72);
+    const panel  = document.getElementById('mapPanel');
+    const mapEl  = document.getElementById('busMap');
+    panel.style.width  = sizePx + 'px';
+    panel.style.height = sizePx + 'px';
+    mapEl.style.width  = sizePx + 'px';
+    mapEl.style.height = sizePx + 'px';
 
-    const mapEl = document.getElementById('busMap');
     window.busMap = new google.maps.Map(mapEl, {
       zoom: 11,
       center: { lat: 38.5, lng: -98.0 },
@@ -568,7 +571,19 @@
       }
     });
 
-    // Force Google Maps to recalculate canvas against actual container size
+    // Re-enforce px after init and trigger resize
+    panel.style.width  = sizePx + 'px';
+    panel.style.height = sizePx + 'px';
+    mapEl.style.width  = sizePx + 'px';
+    mapEl.style.height = sizePx + 'px';
+
+    // Force all Google-injected child divs to match
+    Array.from(panel.querySelectorAll('div')).forEach(d => {
+      d.style.maxWidth  = sizePx + 'px';
+      d.style.maxHeight = sizePx + 'px';
+      d.style.overflow  = 'hidden';
+    });
+
     google.maps.event.trigger(window.busMap, 'resize');
     window.busMap.setCenter({ lat: 38.5, lng: -98.0 });
 
