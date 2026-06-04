@@ -148,7 +148,7 @@
       position: absolute; bottom: 0; right: 0;
       width: 72vh; height: 72vh;
       background: #0a0f18;
-      z-index: 2;
+      z-index: 2; opacity: 0.6;
       overflow: hidden;
     }
     #busMap {
@@ -524,6 +524,7 @@
       fullscreenControl: false,
       mapTypeControl: false,
       gestureHandling: 'none',
+      backgroundColor: 'transparent',
       styles: [
         { elementType: 'geometry',        stylers: [{ color: '#1a1f2e' }] },
         { elementType: 'labels.text.fill',stylers: [{ color: '#c8d0e0' }] },
