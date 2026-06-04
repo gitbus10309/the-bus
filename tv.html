@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GitBus — Live Display</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC8X-ZCxl_6kurEMlZOWB_uz78KX4jm8YU&callback=initMap" async defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -93,10 +93,12 @@
     }
     .info-value.time  {
       font-size: clamp(5rem, 13vh, 10rem);
+      font-family: 'Oswald', sans-serif;
+      letter-spacing: -0.01em;
     }
     .info-value.accent { color: var(--accent); }
-    .info-value.green  { color: var(--green);  }
-    .info-value.cream  { color: var(--cream);  }
+    .info-value.green  { color: var(--green); font-family: 'Oswald', sans-serif; letter-spacing: -0.01em; }
+    .info-value.cream  { color: var(--cream); font-family: 'Oswald', sans-serif; letter-spacing: -0.01em; }
     .info-value.right  { text-align: right; }
     .info-sub {
       font-family: 'Barlow', sans-serif;
@@ -115,7 +117,7 @@
     .upcoming-row {
       display: flex; justify-content: space-between; align-items: baseline;
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(1.8rem, 3.8vh, 3rem); font-weight: 600;
+      font-size: clamp(2.4rem, 5vh, 4rem); font-weight: 600;
       color: var(--muted); padding: 0.15rem 0;
     }
     .upcoming-name     { flex: 1; }
@@ -309,8 +311,8 @@
           title: 'Destination',
           icon: {
             url: destPinSvg(),
-            scaledSize: new google.maps.Size(36, 44),
-            anchor: new google.maps.Point(18, 44),
+            scaledSize: new google.maps.Size(50, 62),
+            anchor: new google.maps.Point(25, 62),
           }
         });
       }
@@ -332,8 +334,8 @@
             title: stop.name || `Stop ${i + 1}`,
             icon: {
               url: stopPinSvg(i + 1),
-              scaledSize: new google.maps.Size(36, 44),
-              anchor: new google.maps.Point(18, 44),
+              scaledSize: new google.maps.Size(50, 62),
+              anchor: new google.maps.Point(25, 62),
             }
           });
           stopMarkers.push(marker);
@@ -522,11 +524,11 @@
       title: 'Bus Location',
       icon: {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
-            <text x="26" y="40" text-anchor="middle" font-size="40">🚌</text>
+          <svg xmlns="http://www.w3.org/2000/svg" width="73" height="73" viewBox="0 0 73 73">
+            <text x="36" y="56" text-anchor="middle" font-size="56">🚌</text>
           </svg>`),
-        scaledSize: new google.maps.Size(52, 52),
-        anchor: new google.maps.Point(26, 40),
+        scaledSize: new google.maps.Size(73, 73),
+        anchor: new google.maps.Point(36, 56),
       }
     });
 
