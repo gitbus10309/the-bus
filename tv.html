@@ -228,7 +228,9 @@
     </div>
 
     <div class="map-panel" id="mapPanel">
-      <div id="busMap" style="width:72vh;height:72vh;"></div>
+      <div id="mapClip" style="width:72vh;height:72vh;overflow:hidden;position:relative;">
+        <div id="busMap" style="position:absolute;top:0;left:0;width:72vh;height:72vh;"></div>
+      </div>
     </div>
     <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
   </div>
@@ -519,10 +521,14 @@
   }
 
   window.initMap = function() {
-    // Force container to final size before map init so canvas renders correctly
-    const mapEl = document.getElementById('busMap');
-    mapEl.style.width  = '72vh';
-    mapEl.style.height = '72vh';
+    // Force hard pixel dimensions on clip container and busMap before init
+    const clipEl = document.getElementById('mapClip');
+    const mapEl  = document.getElementById('busMap');
+    const sizePx = Math.round(window.innerHeight * 0.72) + 'px';
+    clipEl.style.width  = sizePx;
+    clipEl.style.height = sizePx;
+    mapEl.style.width   = sizePx;
+    mapEl.style.height  = sizePx;
 
     window.busMap = new google.maps.Map(mapEl, {
       zoom: 11,
