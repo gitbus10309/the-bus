@@ -645,7 +645,7 @@
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
     // Cloudflare Stream via WebRTC WHEP
-    const CF_WHEP_URL = 'YOUR_WHEP_URL';
+    const CF_WHEP_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/75bea43c4e89ef265d7d30272ad0dac4/webRTC/play';
     if (!window.whepInitialized && state.status === 'active') {
       window.whepInitialized = true;
       const video       = document.getElementById('busVideo');
