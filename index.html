@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@1,400&display=swap" rel="stylesheet">
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC8X-ZCxl_6kurEMlZOWB_uz78KX4jm8YU&callback=initMap" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -644,10 +644,10 @@
     document.getElementById('progressFrom').textContent  = state.origin      || 'Origin';
     document.getElementById('progressTo').textContent    = state.destination || 'Destination';
 
-    // Cloudflare Stream via HLS.js
-    const CF_HLS_URL = 'https://customer-1lh5jgl3a6yfywwz.cloudflarestream.com/75bea43c4e89ef265d7d30272ad0dac4/manifest/video.m3u8';
-    if (!window.hlsInitialized && state.status === 'active') {
-      window.hlsInitialized = true;
+    // Cloudflare Stream via WebRTC WHEP
+    const CF_WHEP_URL = 'YOUR_WHEP_URL';
+    if (!window.whepInitialized && state.status === 'active') {
+      window.whepInitialized = true;
       const video       = document.getElementById('busVideo');
       const placeholder = document.getElementById('videoPlaceholder');
       const signalLost  = document.getElementById('videoSignalLost');
@@ -656,41 +656,63 @@
       placeholder.style.display = 'none';
       video.style.display = 'block';
 
-      function startHls() {
-        if (Hls.isSupported()) {
-          if (window.hls) { window.hls.destroy(); }
-          const hls = new Hls({
-            enableWorker: true,
-            startFragPrefetch: true,
-            startPosition: -1,
-            liveSyncDurationCount: 50,
-            liveMaxLatencyDurationCount: 100,
-            maxBufferLength: 180,
-            maxMaxBufferLength: 360,
-            liveDurationInfinity: true
+      async function startWhep() {
+        try {
+          // Create peer connection
+          const pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
+            bundlePolicy: 'max-bundle'
           });
-          window.hls = hls;
-          hls.loadSource(CF_HLS_URL);
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            video.play();
-            signalLost.classList.remove('visible');
-            videoStatus.textContent = '~30–60 sec delay';
-          });
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
+          window.whepPc = pc;
+
+          // Add receive-only transceivers for video and audio
+          pc.addTransceiver('video', { direction: 'recvonly' });
+          pc.addTransceiver('audio', { direction: 'recvonly' });
+
+          // When we get a track, attach to video element
+          pc.ontrack = (event) => {
+            if (event.track.kind === 'video') {
+              video.srcObject = event.streams[0];
+              video.play();
+              signalLost.classList.remove('visible');
+              videoStatus.textContent = 'Live — low latency';
+            }
+          };
+
+          // Monitor connection state
+          pc.onconnectionstatechange = () => {
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
               signalLost.classList.add('visible');
               videoStatus.textContent = 'Cellular service weak — searching';
-              setTimeout(startHls, 5000);
+              pc.close();
+              setTimeout(startWhep, 5000);
             }
+          };
+
+          // Create offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+
+          // Send offer to WHEP endpoint
+          const response = await fetch(CF_WHEP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/sdp' },
+            body: offer.sdp
           });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          // Safari native HLS
-          video.src = CF_HLS_URL;
-          video.play();
+
+          if (!response.ok) throw new Error('WHEP offer rejected: ' + response.status);
+
+          const answerSdp = await response.text();
+          await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+        } catch (err) {
+          console.warn('WHEP error:', err);
+          signalLost.classList.add('visible');
+          videoStatus.textContent = 'Cellular service weak — searching';
+          setTimeout(startWhep, 5000);
         }
       }
-      startHls();
+      startWhep();
     }
 
     // Map
