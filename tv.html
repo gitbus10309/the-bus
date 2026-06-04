@@ -124,19 +124,18 @@
     .upcoming-name     { flex: 1; }
     .upcoming-duration { text-align: right; flex-shrink: 0; }
 
-    /* Last update overlay */
-    .update-overlay {
-      position: absolute; bottom: 1.5vh; right: 1.5vw;
-      background: rgba(13,17,23,0.82); border-radius: 8px;
-      padding: 0.4rem 0.9rem;
-      font-size: clamp(1.2rem, 2.2vh, 1.8rem); font-weight: 600;
+    /* Last update strip — sits in dark space below map square */
+    .update-strip {
+      text-align: right;
+      padding: 0.6rem 1rem 0 0;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1.8rem, 3vh, 2.6rem); font-weight: 600;
       color: var(--muted); letter-spacing: 0.04em;
-      pointer-events: none;
     }
 
     /* ── MAP PANEL ── */
-    .map-panel { position: relative; background: #0a0f18; width: 72vh; height: 100vh; overflow: hidden; }
-    #busMap { width: 72vh; height: 72vh; position: absolute; top: 50%; left: 0; transform: translateY(-50%); }
+    .map-panel { position: relative; background: #0a0f18; width: 72vh; height: 100vh; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+    #busMap { width: 72vh; height: 72vh; flex-shrink: 0; }
 
     /* ── ANIMATIONS ── */
     @keyframes drift { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
@@ -202,9 +201,9 @@
 
     </div>
 
-    <div class="map-panel" id="mapPanel" style="position:relative">
+    <div class="map-panel" id="mapPanel">
       <div id="busMap"></div>
-      <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
+      <div class="update-strip" id="lastUpdate">Waiting for update...</div>
     </div>
   </div>
 </div>
