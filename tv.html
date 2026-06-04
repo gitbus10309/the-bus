@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- NOTE: Map transparency is set to 60% (opacity: 0.6 on .map-panel, backgroundColor: 'transparent' on map init)
+     for diagnostic purposes while map canvas sizing issue is resolved.
+     To disable: comment out opacity line in .map-panel CSS and backgroundColor line in map init. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -148,8 +151,9 @@
       position: absolute; bottom: 0; right: 0;
       width: 72vh; height: 72vh;
       background: #0a0f18;
-      z-index: 2; opacity: 0.6;
+      z-index: 2;
       overflow: hidden;
+      opacity: 0.6; /* DIAGNOSTIC — remove when map sizing resolved */
     }
     #busMap {
       width: 72vh !important;
@@ -515,7 +519,12 @@
   }
 
   window.initMap = function() {
-    window.busMap = new google.maps.Map(document.getElementById('busMap'), {
+    // Force container to final size before map init so canvas renders correctly
+    const mapEl = document.getElementById('busMap');
+    mapEl.style.width  = '72vh';
+    mapEl.style.height = '72vh';
+
+    window.busMap = new google.maps.Map(mapEl, {
       zoom: 11,
       center: { lat: 38.5, lng: -98.0 },
       mapTypeId: 'roadmap',
@@ -524,7 +533,7 @@
       fullscreenControl: false,
       mapTypeControl: false,
       gestureHandling: 'none',
-      backgroundColor: 'transparent',
+      backgroundColor: 'transparent', /* DIAGNOSTIC — remove when map sizing resolved */
       styles: [
         { elementType: 'geometry',        stylers: [{ color: '#1a1f2e' }] },
         { elementType: 'labels.text.fill',stylers: [{ color: '#c8d0e0' }] },
@@ -554,6 +563,10 @@
         anchor: new google.maps.Point(36, 56),
       }
     });
+
+    // Force Google Maps to recalculate canvas against actual container size
+    google.maps.event.trigger(window.busMap, 'resize');
+    window.busMap.setCenter({ lat: 38.5, lng: -98.0 });
 
     if (pendingPos) {
       window.busMarker.setPosition(pendingPos.pos);
