@@ -259,12 +259,12 @@
   });
 
   function getZoom(distanceStr) {
-    if (!distanceStr || distanceStr === '—') return 9;
+    if (!distanceStr || distanceStr === '—') return 10;
     const miles = parseFloat(distanceStr);
-    if (isNaN(miles)) return 9;
-    if (miles < 5)  return 12;
-    if (miles < 20) return 10;
-    return 9;
+    if (isNaN(miles)) return 10;
+    if (miles < 5)  return 13;
+    if (miles < 20) return 11;
+    return 10;
   }
 
   function timeSince(isoString) {
@@ -283,14 +283,34 @@
 
   // ── STOP NUMBER SVG (cream, numbered) ──
   function stopPinSvg(num) {
-    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
-        <path d="M18 0 C8 0 0 8 0 18 C0 30 18 44 18 44 C18 44 36 30 36 18 C36 8 28 0 18 0 Z"
-              fill="#e8ddd0" stroke="#2a3244" stroke-width="2"/>
-        <text x="18" y="23" text-anchor="middle" font-size="15"
-              font-family="Barlow Condensed, sans-serif" font-weight="900"
-              fill="#0d1117">${num}</text>
-      </svg>`);
+    // Use canvas to draw pin with number — avoids Android WebView SVG text issues
+    const canvas = document.createElement('canvas');
+    canvas.width  = 36;
+    canvas.height = 44;
+    const ctx = canvas.getContext('2d');
+
+    // Draw teardrop pin shape
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.bezierCurveTo(8, 0, 0, 8, 0, 18);
+    ctx.bezierCurveTo(0, 28, 18, 44, 18, 44);
+    ctx.bezierCurveTo(18, 44, 36, 28, 36, 18);
+    ctx.bezierCurveTo(36, 8, 28, 0, 18, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#e8ddd0';
+    ctx.fill();
+    ctx.strokeStyle = '#2a3244';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw number
+    ctx.fillStyle = '#0d1117';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(num), 18, 19);
+
+    return canvas.toDataURL();
   }
 
   // ── DESTINATION PIN SVG (orange) ──
@@ -340,8 +360,8 @@
           title: 'Destination',
           icon: {
             url: destPinSvg(),
-            scaledSize: new google.maps.Size(50, 62),
-            anchor: new google.maps.Point(25, 62),
+            scaledSize: new google.maps.Size(36, 44),
+            anchor: new google.maps.Point(18, 44),
           }
         });
       }
@@ -363,8 +383,8 @@
             title: stop.name || `Stop ${i + 1}`,
             icon: {
               url: stopPinSvg(i + 1),
-              scaledSize: new google.maps.Size(50, 62),
-              anchor: new google.maps.Point(25, 62),
+              scaledSize: new google.maps.Size(36, 44),
+              anchor: new google.maps.Point(18, 44),
             }
           });
           stopMarkers.push(marker);
@@ -563,11 +583,11 @@
       title: 'Bus Location',
       icon: {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="73" height="73" viewBox="0 0 73 73">
-            <text x="36" y="56" text-anchor="middle" font-size="56">🚌</text>
+          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+            <text x="26" y="40" text-anchor="middle" font-size="40">🚌</text>
           </svg>`),
-        scaledSize: new google.maps.Size(73, 73),
-        anchor: new google.maps.Point(36, 56),
+        scaledSize: new google.maps.Size(52, 52),
+        anchor: new google.maps.Point(26, 40),
       }
     });
 
