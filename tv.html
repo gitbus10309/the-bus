@@ -152,7 +152,7 @@
       overflow: hidden;
       background: #1a1f2e;
       z-index: 2;
-      /* opacity: 0.6;  DIAGNOSTIC — remove when map sizing resolved */
+      /* opacity: 0.6; */ /* DIAGNOSTIC — commented out, uncomment to re-enable */
     }
     #busMap {
       position: absolute;
@@ -259,12 +259,12 @@
   });
 
   function getZoom(distanceStr) {
-    if (!distanceStr || distanceStr === '—') return 11;
+    if (!distanceStr || distanceStr === '—') return 9;
     const miles = parseFloat(distanceStr);
-    if (isNaN(miles)) return 11;
-    if (miles < 5)  return 13;
-    if (miles < 20) return 12;
-    return 11;
+    if (isNaN(miles)) return 9;
+    if (miles < 5)  return 12;
+    if (miles < 20) return 10;
+    return 9;
   }
 
   function timeSince(isoString) {
@@ -540,7 +540,7 @@
       fullscreenControl: false,
       mapTypeControl: false,
       gestureHandling: 'none',
-      /* backgroundColor: 'transparent',  DIAGNOSTIC — remove when map sizing resolved */
+      /* backgroundColor: 'transparent', */ /* DIAGNOSTIC — commented out, uncomment to re-enable */
       styles: [
         { elementType: 'geometry',        stylers: [{ color: '#1a1f2e' }] },
         { elementType: 'labels.text.fill',stylers: [{ color: '#c8d0e0' }] },
