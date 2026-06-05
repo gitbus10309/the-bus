@@ -56,23 +56,16 @@
 
     /* ── MAIN LAYOUT ── */
     #display { display: none; width: 100vw; height: 100vh; }
-    .layout {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: #1a1f2e;
-      overflow: hidden;
-    }
+    html, body { background: #1a1f2e; margin: 0; padding: 0; }
 
-    /* ── LEFT PANEL — explicit width, text stays left ── */
+    .layout { display: grid; grid-template-columns: 1fr 72vh; height: 100vh; background: #1a1f2e; }
+
+    /* ── LEFT PANEL ── */
     .info-panel {
-      position: absolute; top: 0; left: 0;
-      width: calc(100vw - 72vh); height: 100vh;
       display: flex; flex-direction: column; justify-content: center;
       padding: 3vh 4vh 3vh 5vh; gap: 2.5vh;
       background: #1a1f2e;
-      z-index: 1;
-      overflow: hidden;
+      min-width: 0; overflow: hidden;
     }
     .trip-name {
       font-family: 'Barlow Condensed', sans-serif;
@@ -136,27 +129,23 @@
     .upcoming-name     { flex: 1; }
     .upcoming-duration { text-align: right; flex-shrink: 0; }
 
-    /* Last update — bottom-right corner of full screen container */
+    /* Last update — anchored bottom-right inside map square */
     .update-overlay {
-      position: absolute; bottom: 1.2vh; right: 1.5vh;
+      position: absolute; bottom: 0.8vh; right: 0.8vh;
+      background: rgba(26,31,46,0.85); border-radius: 6px;
+      padding: 0.3rem 0.75rem;
       font-family: 'Barlow Condensed', sans-serif;
       font-size: clamp(1.6rem, 2.8vh, 2.4rem); font-weight: 600;
       color: var(--muted); letter-spacing: 0.04em;
-      z-index: 10;
       pointer-events: none;
     }
 
     /* ── MAP PANEL ── */
     .map-panel {
-      position: absolute; bottom: 0; right: 0;
-      overflow: hidden;
+      display: flex; flex-direction: column; justify-content: flex-end;
       background: #1a1f2e;
-      z-index: 2;
-      /* opacity: 0.6; */ /* DIAGNOSTIC — commented out, uncomment to re-enable */
-    }
-    #busMap {
-      position: absolute;
-      top: 0; left: 0;
+      overflow: hidden;
+      height: 100vh;
     }
     #busMap {
       width: 72vh !important;
@@ -231,9 +220,11 @@
     </div>
 
     <div class="map-panel" id="mapPanel">
-      <div id="busMap"></div>
+      <div style="position:relative;width:72vh;height:72vh;flex-shrink:0;overflow:hidden;">
+        <div id="busMap" style="width:100%;height:100%;"></div>
+        <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
+      </div>
     </div>
-    <div class="update-overlay" id="lastUpdate">Waiting for update...</div>
   </div>
 </div>
 
@@ -542,15 +533,7 @@
   }
 
   window.initMap = function() {
-    // Set hard pixel dimensions before Maps API touches anything
-    const sizePx = Math.round(window.innerHeight * 0.72);
-    const panel  = document.getElementById('mapPanel');
-    const mapEl  = document.getElementById('busMap');
-    panel.style.width  = sizePx + 'px';
-    panel.style.height = sizePx + 'px';
-    mapEl.style.width  = sizePx + 'px';
-    mapEl.style.height = sizePx + 'px';
-
+    const mapEl = document.getElementById('busMap');
     window.busMap = new google.maps.Map(mapEl, {
       zoom: 11,
       center: { lat: 38.5, lng: -98.0 },
@@ -589,19 +572,6 @@
         scaledSize: new google.maps.Size(52, 52),
         anchor: new google.maps.Point(26, 40),
       }
-    });
-
-    // Re-enforce px after init and trigger resize
-    panel.style.width  = sizePx + 'px';
-    panel.style.height = sizePx + 'px';
-    mapEl.style.width  = sizePx + 'px';
-    mapEl.style.height = sizePx + 'px';
-
-    // Force all Google-injected child divs to match
-    Array.from(panel.querySelectorAll('div')).forEach(d => {
-      d.style.maxWidth  = sizePx + 'px';
-      d.style.maxHeight = sizePx + 'px';
-      d.style.overflow  = 'hidden';
     });
 
     google.maps.event.trigger(window.busMap, 'resize');
